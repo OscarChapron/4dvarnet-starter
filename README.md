@@ -29,22 +29,6 @@ To run the configuration for the ECS reconstruction
 python main.py xp=sound_base 
 ```
 
-### Gulfstream training
-
-## eNATL
-
-Here is an example of the reconstruction of the ECS using a 0.1 sampling rate (i.e. 10% of the data) for the eNATL dataset.
-
-|     |  ECS Metrics |
-|:----|-------------:|
-| μ   |   0.38142    |
-| σ   |   0.14853    |
-| λx  |   0.802      |
-| λt  |   8.308      |
-
-Animation:
-![Animation](https://s3.eu-central-1.wasabisys.com/melody/eNATL/ECS/animation_git.gif)
-
 ## eNATL training and NATL testing
 
 To run the configuration for the ECS reconstruction of the NATL dataset using the eNATL dataset as training.
