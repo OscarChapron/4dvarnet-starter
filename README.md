@@ -47,7 +47,7 @@ Here is an example of the reconstruction of the ECS using a 0.1 sampling rate (i
 | λt |   49.806  |
 
 Animation:
-![Animation](https://s3.eu-central-1.wasabisys.com/melody/eNATL/ECS/new_reco_NATL_crop.gif)
+![Animation](https://s3.eu-central-1.wasabisys.com/melody/eNATL/ECS/new_reco_NATL_speed.gif)
 
 ## Useful links:
 
