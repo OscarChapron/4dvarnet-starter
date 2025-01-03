@@ -37,7 +37,7 @@ To run the configuration for the ECS reconstruction of the NATL dataset using th
 python main.py xp=sound_base_transfert +params=bigger_model
 ```
 
-Here is an example of the reconstruction of the ECS using a 0.1 sampling rate (i.e. 1% of the data) of the NATL dataset using the eNATL dataset as training.
+Here is an example of the reconstruction of the ECS using a 0.01 sampling rate (i.e. 0.1% of the data) of the NATL dataset using the eNATL dataset as training.
 
 |    |   Metrics |
 |:---|----------:|
