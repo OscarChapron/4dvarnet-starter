@@ -25,8 +25,8 @@ obs_cost:
   _target_: contrib.multimodal.MultiModalObsCost
   dim_in: ${datamodule.xrds_kw.patch_dims.time}
   dim_hidden: 5
-  #ecs_weight: 0.5
-  #sst_weight: 0.5
+  ecs_weight: 0.5
+  sst_weight: 0.5
 
 ## Override config
 test_dm:
@@ -42,6 +42,6 @@ datamodule:
   input_da: ${sst_da_test}
 
 model:
-  #_target_: contrib.multimodal.Lit4dVarNet
+  _target_: contrib.multimodal.Lit4dVarNet_SST
   solver:
     obs_cost: ${obs_cost}

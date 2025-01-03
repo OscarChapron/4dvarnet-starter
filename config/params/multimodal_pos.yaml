@@ -3,25 +3,32 @@ inp_pos:
   train: '/DATASET/envs/oscar/eNATL60_BLB002_pos.nc'
   test: '/DATASET/envs/oscar/NATL60GULF-CJM165_pos.nc'
 ## Specific components
-pos_da: 
+pos_da_train: 
   _target_: contrib.multimodal_pos.load_natl_data_pos
-  tgt_path: ${paths.tgt[${entrypoint}]}  # .train or .test
-  inp_path: ${paths.inp[${entrypoint}]}  # .train or .test
-  pos_path: ${inp_pos[${entrypoint}]}  # .train or .test
+  tgt_path: ${paths.tgt.train}
+  inp_path: ${paths.inp.train}
+  pos_path: ${inp_pos.train}
   tgt_var: ecs
   inp_var: ecs
   pos_var: pos_0_001
-  domain: ${domain.train}
-  period: ${period[${entrypoint}]}  # .train or .test
+
+pos_da_test: 
+  _target_: contrib.multimodal_pos.load_natl_data_pos
+  tgt_path: ${paths.tgt.test}
+  inp_path: ${paths.inp.test}
+  pos_path: ${inp_pos.test}
+  tgt_var: ecs
+  inp_var: ecs
+  pos_var: pos_0_001
 
 ## Override config
-datamodule:
+train_dm:
   _target_: contrib.multimodal_pos.MultiModalPosDataModule
-  input_da: ${pos_da}
-  xrds_kw:
-    patch_dims: { time: 15, lat: 240, lon: 240}
-    strides: { time: 1, lat: 200, lon: 200}
-    domain_limits: ${domain.train}
+  input_da: ${pos_da_train}
+  
+test_dm:
+  _target_: contrib.multimodal_pos.MultiModalPosDataModule
+  input_da: ${pos_da_test}
 
 model:
   _target_: contrib.multimodal_pos.Lit4dVarNetPos
