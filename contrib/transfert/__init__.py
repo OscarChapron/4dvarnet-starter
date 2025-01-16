@@ -104,6 +104,30 @@ def load_natl_data(tgt_path, tgt_var, inp_path, inp_var, **kwargs):
         .to_array()
     )
 
+def load_natl_data_pca(tgt_path, tgt_var, inp_path, inp_var, **kwargs):
+    tgt = (
+        xr.open_dataset(tgt_path)[tgt_var]
+        .sel(kwargs.get('domain', None))
+        .sel(kwargs.get('period', None))
+        .pipe(threshold_xarray)
+    )
+    inp = (
+        xr.open_dataset(inp_path)[inp_var]
+        .sel(kwargs.get('domain', None))
+        .sel(kwargs.get('period', None))
+        .pipe(threshold_xarray)
+    )
+
+    ds = xr.Dataset(
+        dict(input=inp, tgt=(tgt.dims, tgt.values)),
+        inp.coords,
+    ).stack(time_component=('time', 'component'))
+    
+    ds = ds.transpose('time_component', 'lat', 'lon').to_array()
+    print(ds)
+    
+    return ds
+
 def threshold_xarray(da):
     threshold = 999
     da = xr.where(da > threshold, 0, da)
@@ -114,6 +138,7 @@ def run(trainer, train_dm, test_dm, lit_mod, ckpt=None):
     """
     Fit and test on two distinct domains.
     """
+    print('-*---------------')
     if trainer.logger is not None:
         print()
         print('Logdir:', trainer.logger.log_dir)
