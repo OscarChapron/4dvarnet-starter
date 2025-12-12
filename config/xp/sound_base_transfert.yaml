@@ -1,40 +1,49 @@
 # @package _global_
-ckpt: null
-# /DATASET/envs/oscar/4dvarnet-starter/outputs/2024-10-23/15-49-11/sound_base_transfert/checkpoints/val_mse=2189.66427-epoch=312.ckpt # 1 day [0.001, 0.1] 
+ckpt: outputs/2025-08-14/14-39-21/sound_base_transfert/checkpoints/val_mse=23212952.45049-epoch=551.ckpt
+  # null or path to a checkpoint
+#outputs/2025-08-13/19-08-50/sound_base_transfert/checkpoints/val_mse=24446916.51720-epoch=447.ckpt #default
+#outputs/2025-08-14/14-39-21/sound_base_transfert/checkpoints/val_mse=23212952.45049-epoch=551.ckpt #OI
+#outputs/2025-08-15/12-14-03/sound_base_transfert/checkpoints/val_mse=23606247.23998-epoch=404.ckpt #zeros
+
+#outputs/2024-10-23/15-49-11/sound_base_transfert/checkpoints/val_mse=2189.66427-epoch=312.ckpt # 1 day [0.001, 0.1] 
 #outputs/2024-07-09/09-43-15/sound_base_transfert/checkpoints/val_mse=2366.58319-epoch=045.ckpt
-#outputs/2024-07-03/22-51-28/sound_base_transfert/checkpoints/val_mse=4783.30047-epoch=045.ckpt #null
- #outputs/2024-06-26/11-13-21/sound_base_transfert/checkpoints/val_mse=4727.99461-epoch=052.ckpt
+#outputs/2024-07-03/22-51-28/sound_base_transfert/checkpoints/val_mse=4783.30047-epoch=045.ckpt
+#outputs/2024-06-26/11-13-21/sound_base_transfert/checkpoints/val_mse=4727.99461-epoch=052.ckpt
 #outputs/2024-06-24/17-10-27/sound_base_transfert/checkpoints/val_mse=2405.08618-epoch=044.ckpt
 #outputs/2024-06-25/23-03-48/sound_base_transfert/checkpoints/val_mse=4628.34702-epoch=051.ckpt
-#outputs/2024-06-14/09-41-47/sound_base_transfert/checkpoints/val_mse=3272.60665-epoch=279.ckpt #outputs/2024-06-25/12-37-30/sound_base_transfert/checkpoints/val_mse=2533.82127-epoch=067.ckpt #outputs/2024-04-04/10-21-05/sound_base_comfra/checkpoints/val_mse=978.39137-epoch=586.ckpt #outputs/2024-06-14/09-41-47/sound_base_transfert/checkpoints/val_mse=3272.60665-epoch=279.ckpt 
-#outputs/2024-06-19/19-17-51/sound_base_transfert/checkpoints/val_mse=2128.93279-epoch=252.ckpt #/DATASET/envs/oscar/4dvarnet-starter/outputs/2024-06-19/15-52-47/sound_base_transfert/checkpoints/val_mse=2533.38279-epoch=137.ckpt 
+#outputs/2024-06-14/09-41-47/sound_base_transfert/checkpoints/val_mse=3272.60665-epoch=279.ckpt 
+#outputs/2024-06-25/12-37-30/sound_base_transfert/checkpoints/val_mse=2533.82127-epoch=067.ckpt
+#outputs/2024-04-04/10-21-05/sound_base_comfra/checkpoints/val_mse=978.39137-epoch=586.ckpt 
+#outputs/2024-06-14/09-41-47/sound_base_transfert/checkpoints/val_mse=3272.60665-epoch=279.ckpt 
+#outputs/2024-06-19/19-17-51/sound_base_transfert/checkpoints/val_mse=2128.93279-epoch=252.ckpt
+#outputs/2024-06-19/15-52-47/sound_base_transfert/checkpoints/val_mse=2533.38279-epoch=137.ckpt 
 resolution: '1_20'  # '1_20' or '1_8' (apostrophes « ' » are necessary!)
 
 paths:
     inp:
-      train: '/DATASET/eNATL/eNATL60_BLB002_cutoff_freq_regrid_0_1000m.nc'
-      test: '/DATASET/NATL/NATL60GULF-CJM165_cutoff_freq_regrid_0_1000m.nc'
+      train: '/Odyssey/public/enatl60/celerity/eNATL60_BLB002_cutoff_freq_regrid_0_1000m.nc'
+      test: '/Odyssey/public/natl60/celerity/NATL60GULF-CJM165_cutoff_freq_regrid_0_1000m.nc'
 
     inp_sst: 
-      train: /DATASET/eNATL/eNATL60-BLB002-SST-2009-2010-1_20.nc
-      test: /DATASET/NATL/NATL60-CJM165-SST-2009-2010-1_20.nc
-    
+      train: /Odyssey/public/enatl60/sst/eNATL60-BLB002-SST-2009-2010-1_20.nc
+      test: /Odyssey/public/natl60/sst/NATL60-CJM165-SST-2009-2010-1_20.nc
+      
     inp_ssh: 
-      train: /DATASET/eNATL/eNATL60_BLB002_SSH_nadirs/eNATL60-BLB002-ssh-2009-2010-${resolution}.nc
-      #train: /DATASET/eNATL/eNATL60_BLB002_SSH_nadirs/eNATL60-BLB002-7nadirs-2009-2010-${resolution}.nc
-      test: /DATASET/NATL/NATL60-CJM165-ssh-2012-2013-${resolution}.nc
+      train: /Odyssey/public/enatl60/ssh/eNATL60-BLB002-ssh-2009-2010-${resolution}.nc
+      #train: /Odyssey/public/enatl60/ssh/eNATL60-BLB002-7nadirs-2009-2010-${resolution}.nc
+      test: /Odyssey/public/natl60/ssh/NATL60-CJM165-ssh-2012-2013-${resolution}.nc
     
     tgt:
-      train: '/DATASET/eNATL/eNATL60_BLB002_cutoff_freq_regrid_0_1000m.nc'
-      test: '/DATASET/NATL/NATL60GULF-CJM165_cutoff_freq_regrid_0_1000m.nc'
+      train: '/Odyssey/public/enatl60/celerity/eNATL60_BLB002_cutoff_freq_regrid_0_1000m.nc'
+      test: '/Odyssey/public/natl60/celerity/NATL60GULF-CJM165_cutoff_freq_regrid_0_1000m.nc'
     
     tgt_sst:
-      train: /DATASET/eNATL/eNATL60-BLB002-SST-2009-2010-1_20.nc
-      test: /DATASET/NATL/NATL60-CJM165-SST-2009-2010-1_20.nc
+      train: /Odyssey/public/enatl60/sst/eNATL60-BLB002-SST-2009-2010-1_20.nc
+      test: /Odyssey/public/natl60/sst/NATL60-CJM165-SST-2009-2010-1_20.nc
 
     tgt_ssh:  
-      train: /DATASET/eNATL/eNATL60_BLB002_SSH_nadirs/eNATL60-BLB002-ssh-2009-2010-${resolution}.nc
-      test: /DATASET/NATL/NATL60-CJM165-ssh-2012-2013-${resolution}.nc
+      train: /Odyssey/public/enatl60/ssh/eNATL60-BLB002-ssh-2009-2010-${resolution}.nc
+      test:  /Odyssey/public/natl60/ssh/NATL60-CJM165-ssh-2012-2013-${resolution}.nc
 
 trainer:
   _target_: pytorch_lightning.Trainer
@@ -114,7 +123,7 @@ test_dm:
   std_c: 1.
 
 model:
-  _target_: src.models.Lit4dVarNet
+  _target_: contrib.transfert.Lit4dVarNet_Fasc
   persist_rw: false
   opt_fn:
     _target_: contrib.transfert.cosanneal_lr_adamw
@@ -128,23 +137,24 @@ model:
     crop: {time: 0, lat: 20, lon: 20}
     offset:  1
   solver:
-    _target_: src.models.GradSolver
+    _target_: contrib.transfert.GradSolver_Fasc
     n_step: 10
     lr_grad: 1e3
     prior_cost:
-      _target_: src.models.BilinAEPriorCost
+      _target_: contrib.transfert.BilinAEPriorCost_Fasc
       dim_in: ${datamodule.xrds_kw.patch_dims.time}
       dim_hidden: 32
       bilin_quad: false
       downsamp: 2
     obs_cost:
-      _target_: src.models.BaseObsCost
+      _target_: contrib.transfert.BaseObsCost_Fasc
     grad_mod:
       _target_: src.models.ConvLstmGradModel
       dim_in: ${datamodule.xrds_kw.patch_dims.time}
       dim_hidden: 48
     weight_obs: 1. 
     weight_prior: 1.
+    init_mode: 'OI'
   sampling_rate: 0.001
   norm_type: 'z_score'
   test_metrics: ${metrics.test_metrics}

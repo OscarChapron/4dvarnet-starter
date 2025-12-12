@@ -14,7 +14,7 @@ import xarray as xr
 import kornia.filters as kfilts
 from src.data import AugmentedDataset, BaseDataModule, XrDataset
 import contrib.transfert
-
+import contrib.model_depth
 MultiModalSSTTrainingItem = collections.namedtuple(
     "MultiModalSSTTrainingItem", ["input", "tgt", "sst"]
 )
@@ -121,7 +121,7 @@ class MultiModalDataModule(BaseDataModule):
     
 
 class MultiModalObsCost(nn.Module):
-    def __init__(self, dim_in, dim_hidden, weight1 = 1.):#), ecs_weight, sst_weight, weight1 = 1.):
+    def __init__(self, dim_in, dim_hidden, ecs_weight, sst_weight, weight1 = 1.):
         super().__init__()
         self.base_cost = src.models.BaseObsCost()
 
@@ -129,8 +129,8 @@ class MultiModalObsCost(nn.Module):
         self.conv_sst =  torch.nn.Conv2d(dim_in, dim_hidden, (3, 3), padding=1, bias=False)
         
         self.weight1_torch    = torch.nn.Parameter(torch.tensor(weight1), requires_grad = True)
-        #self.ssh_weight_torch = torch.nn.Parameter(torch.tensor(ecs_weight), requires_grad = True)
-        #self.sst_weight_torch = 1 - self.ssh_weight_torch
+        self.ssh_weight_torch = torch.nn.Parameter(torch.tensor(ecs_weight), requires_grad = True)
+        self.sst_weight_torch = 1 - self.ssh_weight_torch
 
     def forward(self, state, batch):
         ssh_cost =  self.base_cost(state, batch)
@@ -139,8 +139,8 @@ class MultiModalObsCost(nn.Module):
             self.conv_sst(batch.sst.nan_to_num()),
         )
 
-        #final_cost = self.ssh_weight_torch * ssh_cost + self.sst_weight_torch * sst_cost
-        final_cost = ssh_cost + sst_cost
+        final_cost = self.ssh_weight_torch * ssh_cost + self.sst_weight_torch * sst_cost
+        #final_cost = ssh_cost + sst_cost
         return final_cost
     
 class Lit4dVarNet_SST(src.models.Lit4dVarNet):

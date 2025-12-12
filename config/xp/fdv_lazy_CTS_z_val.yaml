@@ -1,0 +1,236 @@
+# @package _global_
+
+ckpt: null
+
+#ckpt: /Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-11-06/15-59-04/fdv_lazy_CTS_z/checkpoints/val_mse=2122.90308-epoch=003.ckpt
+#ckpt: /Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-11-06/14-29-10/fdv_lazy_CTS_z/checkpoints/val_mse=2145.35107-epoch=002.ckpt
+#ckpt: /Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-11-06/13-56-54/fdv_lazy_CTS_z/checkpoints/val_mse=3107.60010-epoch=000.ckpt
+#ckpt: /Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-11-06/11-17-59/fdv_lazy_CTS_z/checkpoints/val_mse=2491.78198-epoch=001.ckpt
+#ckpt: /Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-11-03/15-50-13/fdv_lazy_CTS_z/checkpoints/val_mse=154.77538-epoch=183.ckpt
+#ckpt: /Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-10-29/10-07-18/fdv_lazy_CTS_z/checkpoints/val_mse=241.32208-epoch=598.ckpt # depth true time true
+#ckpt: /Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-10-28/15-38-36/fdv_lazy_CTS_z/checkpoints/val_mse=239.96822-epoch=598.ckpt # depth false time true
+#ckpt: /Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-10-28/15-06-09/fdv_lazy_CTS_z/checkpoints/val_mse=273.74710-epoch=598.ckpt # depth true time false
+#ckpt: /Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-10-28/15-36-16/fdv_lazy_CTS_z/checkpoints/val_mse=276.33707-epoch=598.ckpt # depth false time false
+#ckpt: '/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-10-22/09-32-00/fdv_lazy_CTS/checkpoints/val_mse=258.33960-epoch=498.ckpt'
+
+resolution: '1_20'  # '1_20' or '1_8' (apostrophes are necessary!)
+
+paths:
+  inp:
+    train: '/Odyssey/public/enatl60/celerity/eNATL60_BLB002_cutoff_freq_regrid_0_1000m.nc'
+    test:  '/Odyssey/public/natl60/celerity/NATL60GULF-CJM165_cutoff_freq_regrid_0_1000m.nc'
+
+  inp_cel:
+    train: '/Odyssey/public/enatl60/celerity/eNATL60_BLB002_sound_speed_regrid_0_1000m.nc'
+    test:  '/Odyssey/public/natl60/celerity/NATL60GULF-CJM165_sound_speed_regrid_0_1000m.nc'
+  
+  inp_pca:
+    train: '/Odyssey/public/enatl60/celerity/PCA/eNATL_pca_train_8.nc'
+    test:  '/Odyssey/public/natl60/celerity/PCA/NATL_pca_test_8.nc'
+
+  inp_sst: 
+    train: /Odyssey/public/enatl60/sst/eNATL60-BLB002-SST-2009-2010-1_20.nc
+    test:  /Odyssey/public/natl60/sst/NATL60-CJM165-SST-2009-2010-1_20.nc
+      
+  inp_ssh: 
+    train: /Odyssey/public/enatl60/ssh/eNATL60-BLB002-ssh-2009-2010-${resolution}.nc
+    test:  /Odyssey/public/natl60/ssh/NATL60-CJM165-ssh-2012-2013-${resolution}.nc
+    
+  tgt:
+    train: '/Odyssey/public/enatl60/celerity/eNATL60_BLB002_cutoff_freq_regrid_0_1000m.nc'
+    test:  '/Odyssey/public/natl60/celerity/NATL60GULF-CJM165_cutoff_freq_regrid_0_1000m.nc'
+  
+  tgt_cel:
+    train: '/Odyssey/public/enatl60/celerity/eNATL60_BLB002_sound_speed_regrid_0_1000m.nc'
+    test:  '/Odyssey/public/natl60/celerity/NATL60GULF-CJM165_sound_speed_regrid_0_1000m.nc'
+     
+  tgt_pca:
+    train: '/Odyssey/public/enatl60/celerity/PCA/eNATL_pca_train_8.nc'
+    test:  '/Odyssey/public/natl60/celerity/PCA/NATL_pca_test_8.nc'
+    
+  tgt_sst:
+    train: /Odyssey/public/enatl60/sst/eNATL60-BLB002-SST-2009-2010-1_20.nc
+    test:  /Odyssey/public/natl60/sst/NATL60-CJM165-SST-2009-2010-1_20.nc
+
+  tgt_ssh:  
+    train: /Odyssey/public/enatl60/ssh/eNATL60-BLB002-ssh-2009-2010-${resolution}.nc
+    test:  /Odyssey/public/natl60/ssh/NATL60-CJM165-ssh-2012-2013-${resolution}.nc
+
+
+trainer:
+  _target_: pytorch_lightning.Trainer
+  inference_mode: false  # Enable inference mode for faster test
+  gradient_clip_val: 0.5
+  accelerator: gpu
+  devices: 1
+  logger:
+    _target_: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
+    save_dir: ${hydra:runtime.output_dir}
+    name: ${hydra:runtime.choices.xp}
+    version: ''
+  max_epochs: 150
+  limit_train_batches: 200
+  limit_val_batches: 200
+  gradient_clip_algorithm: norm
+  accumulate_grad_batches: 64
+  callbacks:
+    - _target_: pytorch_lightning.callbacks.LearningRateMonitor
+    - _target_: pytorch_lightning.callbacks.ModelCheckpoint
+      monitor: val_mse
+      save_top_k: 3
+      filename: '{val_mse:.5f}-{epoch:03d}'
+    # - _target_: pytorch_lightning.callbacks.EarlyStopping
+    #   monitor: val_mse
+    #   patience: 20
+    #   mode: min
+
+datamodule:
+  xrds_kw:
+    # depth_dim: 'z'  # Name of your depth dimension
+    depth_dim: 'component'  # Name of your depth dimension
+    max_depth_cache: 2  # Number of depth chunks to cache
+    depth_chunk_size: 5  # Process 5 depths at a time
+    # patch_dims: { time: 15, z: 1, lat: 240, lon: 240}
+    # strides:    { time: 1,  z: 1, lat: 200, lon: 200}
+    patch_dims: { time: 15, component: 1, lat: 240, lon: 240}
+    strides:    { time: 1,  component: 1, lat: 200, lon: 200}
+  dl_kw: {batch_size: 8, num_workers: 4, pin_memory: True, persistent_workers: True}  # Increased batch size and workers for inference
+  aug_kw:
+    aug_factor: 2
+
+train_dm:
+  _target_: contrib.fdv_lazy.fdv_lazy_depth.TransfertLazyDataModule_Depth
+  input_da:
+    _target_: contrib.fdv_lazy.load_natl_data_pca
+    tgt_path: ${paths.tgt_cel.train}
+    tgt_var: celerity
+    inp_path: ${paths.inp_cel.train}
+    inp_var: celerity
+    # tgt_path: ${paths.tgt_pca.train}
+    # tgt_var: pca_train
+    # inp_path: ${paths.inp_pca.train}
+    # inp_var: pca_train
+    domain: ${domain.train}
+  domains:
+    train:
+      time: {_target_: builtins.slice, _args_: ['2009-07-01', '2010-04-09']}
+    val:
+      time: {_target_: builtins.slice, _args_: ['2010-04-10','2010-06-30']}
+    test: null
+  xrds_kw:
+    patch_dims: ${datamodule.xrds_kw.patch_dims}
+    strides: ${datamodule.xrds_kw.strides}
+    domain_limits: ${domain.train}
+  dl_kw: ${datamodule.dl_kw}
+  aug_kw: ${datamodule.aug_kw}
+  norm_type: 'z_score'
+
+test_dm:
+  _target_: contrib.fdv_lazy.fdv_lazy_depth.TransfertLazyDataModule_Depth
+  input_da:
+    _target_: contrib.fdv_lazy.load_natl_data_pca
+    tgt_path: ${paths.tgt_cel.test}
+    tgt_var: celerity
+    inp_path: ${paths.inp_cel.test}
+    inp_var: celerity
+    # tgt_path: ${paths.tgt_pca.test}
+    # tgt_var: pca_test
+    # inp_path: ${paths.inp_pca.test}
+    # inp_var: pca_test
+    domain: ${domain.train}
+  domains:
+    train: null
+    val: null
+    test:
+      time: {_target_: builtins.slice, _args_: ['2012-12-10', '2013-01-01']}
+  mean_std_domain: test
+  xrds_kw:
+    patch_dims: ${datamodule.xrds_kw.patch_dims}
+    strides: ${datamodule.xrds_kw.strides}
+    domain_limits: ${domain.train}
+  dl_kw: ${datamodule.dl_kw}
+  aug_kw: ${datamodule.aug_kw}
+  norm_type: 'z_score'
+  std_c: 1.
+
+model:
+  _target_: contrib.fdv_lazy.Lit4dVarNet_LazyTransfert_Fast
+  #_target_: contrib.transfert.Lit4dVarNet_Fasc
+  persist_rw: false
+  opt_fn:
+    _target_: contrib.fdv_unet.cosanneal_lr_adamw
+    _partial_: true
+    lr: 1e-4
+    T_max: ${trainer.max_epochs}
+    weight_decay: 1e-3
+  rec_weight:
+    _target_: contrib.model_depth.get_triang_time_wei_coeff
+    patch_dims: ${datamodule.xrds_kw.patch_dims}
+    crop: {time: 0, lat: 20, lon: 20}
+    offset:  1
+  solver:
+    _target_: contrib.fdv_lazy.GradSolver_Fasc_withStep_z
+    n_step: 10
+    lr_grad: 50.0
+    prior_cost:
+      _target_: contrib.transfert.BilinAEPriorCost_Fasc
+      dim_in: ${eval:${datamodule.xrds_kw.patch_dims.time}*${datamodule.xrds_kw.patch_dims.component}} #45 
+      dim_hidden: 32
+      bilin_quad: false
+      downsamp: 2
+    obs_cost:
+      _target_: contrib.transfert.BaseObsCost_Fasc
+    grad_mod:
+      _target_: src.models.ConvLstmGradModel
+      dim_in: ${eval:${datamodule.xrds_kw.patch_dims.time}*${datamodule.xrds_kw.patch_dims.component}} #45 
+      dim_hidden: 48
+    weight_obs: 1.
+    weight_prior: 1.
+    init_mode: 'OI'
+
+  sampling_rate: 0.001
+  # norm_type: 'z_score'
+  test_metrics: ${metrics.test_metrics}
+  pre_metric_fn:
+    _target_: xarray.Dataset.sel
+    _partial_: True
+    time: {_target_: builtins.slice, _args_: ['2012-10-21', '2013-09-10']}
+    lat: ${domain.test.lat}
+    lon: ${domain.test.lon}
+
+metrics:
+  nrmse_scores: {_target_: contrib.fdv_lazy.rmse_based_scores_from_ds_slice, _partial_: true}
+  psd_scores:  {_target_: contrib.fdv_lazy.psd_based_scores_from_ds_slice,  _partial_: true}
+  get0: {_target_: operator.itemgetter, _args_: [0]}
+  get1: {_target_: operator.itemgetter, _args_: [1]}
+  test_metrics:
+    mu:
+      _target_: src.utils.pipe
+      _partial_: true
+      fns: ['${metrics.nrmse_scores}', '${metrics.get0}']
+    sig:
+      _target_: src.utils.pipe
+      _partial_: true
+      fns: ['${metrics.nrmse_scores}', '${metrics.get1}']
+    lx:
+      _target_: src.utils.pipe
+      _partial_: true
+      fns: ['${metrics.psd_scores}', '${metrics.get0}']
+    lt:
+      _target_: src.utils.pipe
+      _partial_: true
+      fns: ['${metrics.psd_scores}', '${metrics.get1}']
+
+entrypoints:
+  - _target_: pytorch_lightning.seed_everything
+    seed: 333
+  - _target_: contrib.fdv_lazy.run # fit + test
+    trainer: ${trainer}
+    lit_mod: ${model}
+    train_dm: ${train_dm}
+    test_dm: ${test_dm}
+    ckpt: ${ckpt}
+
+defaults:
+  - /domain: gf
+  - _self_

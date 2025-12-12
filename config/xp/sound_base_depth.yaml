@@ -25,7 +25,7 @@ trainer:
       save_top_k: 3
       filename: '{val_mse:.5f}-{epoch:03d}'
 
-datamodule:lat
+datamodule:
   _target_: src.data.BaseDataModule
   input_da: 
     _target_: src.utils.load_celerity_data

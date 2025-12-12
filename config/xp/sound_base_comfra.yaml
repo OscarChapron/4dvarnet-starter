@@ -119,7 +119,7 @@ model:
     T_max: ${trainer.max_epochs}
     weight_decay: 1e-2
   rec_weight:
-      _target_: src.utils.get_dirac_time_wei
+      _target_: contrib.transfert.get_dirac_time_wei
       patch_dims: ${datamodule.xrds_kw.patch_dims}
       crop: {time: 0, lat: 20, lon: 20}
       offset: 1

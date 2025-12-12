@@ -1,5 +1,32 @@
 # @package _global_
-ckpt: null  # null or path to a checkpoint
+#ckpt: null  # path to a checkpoint or null
+ckpt: outputs/2025-08-14/18-28-42/base_depth_multivariate/checkpoints/val_mse=0.06793-epoch=138.ckpt # default
+#outputs/2025-08-16/20-47-49/base_depth_multivariate/checkpoints/val_mse=0.06950-epoch=269.ckpt # zeros
+#outputs/2025-08-18/23-10-44/base_depth_multivariate/checkpoints/val_mse=0.06280-epoch=105.ckpt # OI
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-07-04/11-29-52/base_depth_multivariate/checkpoints/val_mse=0.18289-epoch=065.ckpt
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-06-13/14-05-18/base_depth_multivariate/checkpoints/val_mse=0.10966-epoch=569.ckpt
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-06-13/14-06-38/base_depth_multivariate/checkpoints/val_mse=0.10577-epoch=315.ckpt
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-06-10/17-07-12/base_depth_multivariate/checkpoints/val_mse=1.53555-epoch=223.ckpt # Unet 3 PCA 0.1 Unet
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-05-28/10-21-03/base_depth_multivariate/checkpoints/val_mse=0.11029-epoch=466.ckpt # 4DVN 8 PCA 0.1 4DVN
+
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-05-28/10-34-06/base_depth_multivariate/checkpoints/val_mse=0.11858-epoch=398.ckpt # Unet 8 PCA 0.1 UNet
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-05-28/10-38-34/base_depth_multivariate/checkpoints/val_mse=0.11337-epoch=359.ckpt # 4DVN 8 PCA 0.1 4DVN
+
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-05-22/14-55-46/base_depth_multivariate/checkpoints/val_mse=0.14618-epoch=460.ckpt # Unet 8 PCA + ECS 0.1 UNet
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-05-14/13-38-26/base_depth_multivariate/checkpoints/val_mse=0.07587-epoch=199.ckpt # Unet 3 PCA + ECS 0.1 UNet
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-05-14/13-36-08/base_depth_multivariate/checkpoints/val_mse=0.06744-epoch=185.ckpt # 4DVN 3 PCA + ECS 0.1 4DVN
+
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-04-08/15-11-53/base_depth_multivariate/checkpoints/val_mse=0.01365-epoch=511.ckpt  # 4DVN 3 PCA_interp 0.1 4DVN
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-04-08/17-27-55/base_depth_multivariate/checkpoints/val_mse=0.01755-epoch=443.ckpt # 4DVN 3 PCA_mask 0.1 4DVN
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-04-11/10-02-38/base_depth_multivariate/checkpoints/val_mse=0.01574-epoch=416.ckpt # 4DVN 3 PCA_interp 0.1 UNet
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-04-11/10-03-56/base_depth_multivariate/checkpoints/val_mse=0.02544-epoch=191.ckpt # 4DVN 3 PCA_mask 0.1 UNet
+
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-03-12/11-14-16/base_depth_multivariate/checkpoints/val_mse=0.01205-epoch=505.ckpt # 4DVN 3 PCA 0.1 UNet
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-03-12/11-16-27/base_depth_multivariate/checkpoints/val_mse=0.01506-epoch=391.ckpt # Unet 3 PCA 0.1 UNet
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-03-05/16-36-57/base_depth_multivariate/checkpoints/val_mse=0.02479-epoch=598.ckpt # 4DVN 5 PCA 1 4DVN 
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-03-05/15-58-55/base_depth_multivariate/checkpoints/val_mse=0.07227-epoch=527.ckpt # 4DVN 5 PCA 0.1 4DVN
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-03-06/09-34-40/base_depth_multivariate/checkpoints/val_mse=0.06290-epoch=430.ckpt # Unet 5 PCA 0.1 UNet
+#/Odyssey/private/ochapron/4dvarnet-starter/outputs/2025-03-05/16-14-17/base_depth_multivariate/checkpoints/val_mse=0.03834-epoch=209.ckpt # Unet 5 PCA 1 UNet
 resolution: '1_20'  # '1_20' or '1_8' (apostrophes « ' » are necessary!)
 
 paths:
@@ -8,8 +35,8 @@ paths:
       test: '/Odyssey/public/natl60/celerity/NATL60GULF-CJM165_cutoff_freq_regrid_0_1000m.nc'
 
     inp_pca:
-      train: '/Odyssey/public/enatl60/celerity/PCA/eNATL_pca_train.nc'
-      test: '/Odyssey/public/natl60/celerity/PCA/NATL_pca_test.nc'
+      train: '/Odyssey/public/enatl60/celerity/PCA/eNATL_pca_train_3.nc'
+      test: '/Odyssey/public/natl60/celerity/PCA/NATL_pca_test_3.nc'
 
     inp_sst: 
       train: /Odyssey/public/enatl60/sst/eNATL60-BLB002-SST-2009-2010-1_20.nc
@@ -25,8 +52,8 @@ paths:
       test: '/Odyssey/public/natl60/celerity/NATL60GULF-CJM165_cutoff_freq_regrid_0_1000m.nc'
     
     tgt_pca:
-      train: '/Odyssey/public/enatl60/celerity/PCA/eNATL_pca_train.nc'
-      test: '/Odyssey/public/natl60/celerity/PCA/NATL_pca_test.nc'
+      train: '/Odyssey/public/enatl60/celerity/PCA/eNATL_pca_train_3.nc'
+      test: '/Odyssey/public/natl60/celerity/PCA/NATL_pca_test_3.nc'
     
     tgt_sst:
       train: /Odyssey/public/enatl60/sst/eNATL60-BLB002-SST-2009-2010-1_20.nc
@@ -48,7 +75,7 @@ trainer:
     name: ${hydra:runtime.choices.xp}
     version: ''
   max_epochs: 150
-  accumulate_grad_batches: 16
+  accumulate_grad_batches: 32
   callbacks:
     - _target_: pytorch_lightning.callbacks.LearningRateMonitor
     - _target_: pytorch_lightning.callbacks.ModelCheckpoint
@@ -58,9 +85,9 @@ trainer:
 
 datamodule:
   xrds_kw:
-    patch_dims: { time: 15, component: 5, lat: 240, lon: 240}
+    patch_dims: { time: 15, component: 3, lat: 240, lon: 240}
     strides: { time: 1, component: 1, lat: 200, lon: 200}
-  dl_kw: {batch_size: 8, num_workers: 1}
+  dl_kw: {batch_size: 8, num_workers: 1, pin_memory: False, persistent_workers: False}
   aug_kw:
     aug_factor: 2
 
@@ -113,6 +140,108 @@ test_dm:
   norm_type: 'z_score'
   std_c: 1.
 
+# train_dm:
+#   _target_: contrib.model_depth.TransfertDataModule
+#   input_da:
+#     _target_: contrib.model_depth.load_multivar_dataset
+#     cfg:             
+#       tgt_specs:                                           
+#         - path: ${paths.tgt_pca.train}
+#           name:  pca_train
+#           extra_dim: component
+#           fill_nan: 0
+#           input_arch: full_input
+#           output_arch: full_output     
+#         # - path: ${paths.tgt.train}
+#         #   name:  ecs   
+#         #   threshold: 999
+#         #   input_arch: full_input
+#         #   output_arch: full_output  
+#       inp_specs:                                            
+#         - path: ${paths.inp_pca.train}
+#           name:  pca_train
+#           extra_dim: component
+#           fill_nan: 0
+#           input_arch: full_input
+#           output_arch: full_output
+#         # - path: ${paths.inp.train}
+#         #   name:  ecs
+#         #   threshold: 999
+#         #   input_arch: full_input
+#         #   output_arch: full_output 
+#       domain: ${domain.train}
+#       full_time_domain:
+#         train:
+#           time: {_target_: builtins.slice, _args_: ['2009-07-01', '2010-04-09']}
+#         val:
+#           time: {_target_: builtins.slice, _args_: ['2010-04-10','2010-06-30']}
+#         test:           
+#           time: null
+#   domains:
+#     train:
+#       time: {_target_: builtins.slice, _args_: ['2009-07-01', '2010-04-09']}
+#     val:
+#       time: {_target_: builtins.slice, _args_: ['2010-04-10','2010-06-30']}
+#     test: null
+#   xrds_kw:
+#     patch_dims: ${datamodule.xrds_kw.patch_dims}
+#     strides: ${datamodule.xrds_kw.strides}
+#     domain_limits: ${domain.train}
+#   dl_kw: ${datamodule.dl_kw}
+#   aug_kw: ${datamodule.aug_kw}
+
+# test_dm:
+#   _target_: contrib.model_depth.TransfertDataModule
+#   input_da:
+#     _target_: contrib.model_depth.load_multivar_dataset
+#     cfg:
+#       tgt_specs:                                            
+#         - path: ${paths.tgt_pca.test}
+#           name:  pca_test
+#           extra_dim: component
+#           fill_nan: 0
+#           input_arch: full_input
+#           output_arch: full_output
+#         # - path: ${paths.tgt.test}
+#         #   name:  ecs
+#         #   threshold: 999
+#         #   input_arch: full_input
+#         #   output_arch: full_output 
+#       inp_specs:                                            
+#         - path: ${paths.inp_pca.test}
+#           name:  pca_test
+#           extra_dim: component
+#           fill_nan: 0
+#           input_arch: full_input
+#           output_arch: full_output  
+#         # - path: ${paths.inp.test}
+#         #   name:  ecs
+#         #   threshold: 999
+#         #   input_arch: full_input
+#         #   output_arch: full_output    
+#       domain: ${domain.train}
+#       full_time_domain:     
+#         train:
+#           time: null
+#         val:
+#           time: null
+#         test:           
+#           time: {_target_: builtins.slice, _args_: ['2012-10-01', '2013-09-30']}
+#   domains:
+#     train: null
+#     val: null
+#     test:
+#       time: {_target_: builtins.slice, _args_: ['2012-10-01', '2013-09-30']}
+#       #time: {_target_: builtins.slice, _args_: ['2013-06-15', '2013-09-10']} #['2013-06-01', '2013-09-30']}
+#   mean_std_domain: test
+#   xrds_kw:
+#     patch_dims: ${datamodule.xrds_kw.patch_dims}
+#     strides: ${datamodule.xrds_kw.strides}
+#     domain_limits: ${domain.train}
+#   dl_kw: ${datamodule.dl_kw}
+#   aug_kw: ${datamodule.aug_kw}
+#   std_c: 1.
+
 model:
   _target_: contrib.model_depth.Lit4dVarNet_depth
   persist_rw: false
@@ -123,28 +252,29 @@ model:
     T_max: ${trainer.max_epochs}
     weight_decay: 1e-3
   rec_weight:
-    _target_: src.utils.get_triang_time_wei_coeff
+    _target_: contrib.model_depth.get_triang_time_wei_coeff
     patch_dims: ${datamodule.xrds_kw.patch_dims}
     crop: {time: 0, lat: 20, lon: 20}
     offset:  1
   solver:
-    _target_: src.models.GradSolver
+    _target_: contrib.transfert.GradSolver_Fasc
     n_step: 10
     lr_grad: 1e3
     prior_cost:
-      _target_: src.models.BilinAEPriorCost
-      dim_in: 75 #${datamodule.xrds_kw.patch_dims.time} * ${datamodule.xrds_kw.patch_dims.component}
+      _target_: contrib.transfert.BilinAEPriorCost_Fasc
+      dim_in: ${eval:${datamodule.xrds_kw.patch_dims.time}*${datamodule.xrds_kw.patch_dims.component}} #45 
       dim_hidden: 32
       bilin_quad: false
       downsamp: 2
     obs_cost:
-      _target_: src.models.BaseObsCost
+      _target_: contrib.transfert.BaseObsCost_Fasc
     grad_mod:
       _target_: src.models.ConvLstmGradModel
-      dim_in: 75 #${datamodule.xrds_kw.patch_dims.time} * ${datamodule.xrds_kw.patch_dims.component}
+      dim_in: ${eval:${datamodule.xrds_kw.patch_dims.time}*${datamodule.xrds_kw.patch_dims.component}} #45 
       dim_hidden: 48
     weight_obs: 1. 
     weight_prior: 1.
+    init_mode: 'OI'
   sampling_rate: 0.001
   #norm_type: 'z_score'
   test_metrics: ${metrics.test_metrics}

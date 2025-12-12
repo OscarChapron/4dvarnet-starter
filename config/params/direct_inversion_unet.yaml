@@ -1,23 +1,55 @@
 # @package _global_
-
 trainer:
   max_epochs: 600
 
 prior_cost_unet:
-  _target_: src.unet.UNet
+  _target_: contrib.direct_inversion.UNet_fdv
   n_channels: ${datamodule.xrds_kw.patch_dims.time}
   n_classes: ${datamodule.xrds_kw.patch_dims.time}
   bilinear: false
 
+prior_cost_unet_depth_v0:
+  _target_: contrib.direct_inversion.UNet_fdv
+  n_channels: ${eval:${datamodule.xrds_kw.patch_dims.time}*${datamodule.xrds_kw.patch_dims.component}}
+  n_classes: ${eval:${datamodule.xrds_kw.patch_dims.time}*${datamodule.xrds_kw.patch_dims.component}}
+  bilinear: false
+
+prior_cost_unet_depth:
+  _target_: contrib.Unet_fdv.UNetModel
+  in_channels: ${eval:${datamodule.xrds_kw.patch_dims.time}*${datamodule.xrds_kw.patch_dims.component}}
+  out_channels: ${eval:${datamodule.xrds_kw.patch_dims.time}*${datamodule.xrds_kw.patch_dims.component}}
+  model_channels: 96
+  num_res_blocks: 2
+  channel_mult: [1,2,4]
+  attention_resolutions: []
+  use_checkpoint: true
+
+prior_cost_unet_depth_vZ:
+  _target_: contrib.Unet_fdv.UNet_fdv
+  n_channels: ${eval:${datamodule.xrds_kw.patch_dims.time}*${datamodule.xrds_kw.patch_dims.component}}
+  n_classes: ${eval:${datamodule.xrds_kw.patch_dims.time}*${datamodule.xrds_kw.patch_dims.component}}
+  # z-conditioning:
+  n_depth: ${datamodule.xrds_kw.patch_dims.component}      # Z
+  z_fourier_bands: 6
+  # optional physical depths (meters). If omitted, uses 0..1:
+  # z_values: [0, 50, 100, 150, 200, 300, 400, 600, 800, 1000]
+  # capacity tweaks (optional):
+  model_channels: 96
+  channel_mult: [1,2,4]
+  attention_resolutions: []
+  use_checkpoint: true
+
 prior_cost_bilinAE:
-  _target_: src.models.BilinAEPriorCost
+  _target_: contrib.transfert.BilinAEPriorCost_Fasc
   dim_in: ${datamodule.xrds_kw.patch_dims.time}
   dim_hidden: 64
   bilin_quad: false
   downsamp: 2
 model:
-  _target_: src.models.Lit4dVarNet
+  # _target_: contrib.model_depth.Lit4dVarNet_depth
+  _target_: contrib.fdv_lazy.Lit4dVarNet_LazyTransfert
   solver:
     n_step: 0
-    prior_cost: ${prior_cost_unet}
-
+    #prior_cost: ${prior_cost_unet_depth_vZ}
+    prior_cost: ${prior_cost_unet_depth}
+    #prior_cost: ${prior_cost_unet_depth_v0}

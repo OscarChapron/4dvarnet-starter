@@ -17,19 +17,6 @@ def base_training(trainer, dm, lit_mod, ckpt=None):
     #trainer.test(lit_mod, datamodule=dm, ckpt_path='best')
     trainer.test(lit_mod, datamodule=dm, ckpt_path=ckpt)
 
-def base_testing(trainer, dm, lit_mod, ckpt_path='best'):
-    if trainer.logger is not None:
-        print()
-        print("Logdir:", trainer.logger.log_dir)
-        print()
-    # Load the model from the specified checkpoint
-    if ckpt_path is not None:
-        lit_mod = lit_mod.load_from_checkpoint(ckpt_path)
-
-    # Set the model to evaluation mode
-    lit_mod.eval()
-    trainer.test(lit_mod, datamodule=dm)
-
 def multi_dm_training(trainer, dm, lit_mod, test_dm=None, test_fn=None, ckpt=None):
     if trainer.logger is not None:
         print()

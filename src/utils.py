@@ -36,33 +36,9 @@ def half_lr_adam(lit_mod, lr):
         ],
     )
 
-def cosanneal_lr_adam_AE(lit_mod, lr, T_max=100, weight_decay=0.):
-    opt = torch.optim.Adam(
-        [
-            {"params": lit_mod.prior_cost.parameters(), "lr": lr },
-        ], weight_decay=weight_decay
-    )
-    return {
-        "optimizer": opt,
-        "lr_scheduler": torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=T_max),
-    }
-
 
 def cosanneal_lr_adam(lit_mod, lr, T_max=100, weight_decay=0.):
     opt = torch.optim.Adam(
-        [
-            {"params": lit_mod.solver.grad_mod.parameters(), "lr": lr},
-            {"params": lit_mod.solver.obs_cost.parameters(), "lr": lr},
-            {"params": lit_mod.solver.prior_cost.parameters(), "lr": lr / 2},
-        ], weight_decay=weight_decay
-    )
-    return {
-        "optimizer": opt,
-        "lr_scheduler": torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=T_max),
-    }
-
-def cosanneal_lr_adamw(lit_mod, lr, T_max=100, weight_decay=0.):
-    opt = torch.optim.AdamW(
         [
             {"params": lit_mod.solver.grad_mod.parameters(), "lr": lr},
             {"params": lit_mod.solver.obs_cost.parameters(), "lr": lr},
@@ -95,7 +71,6 @@ def triang_lr_adam(lit_mod, lr_min=5e-5, lr_max=3e-3, nsteps=200):
             {"params": lit_mod.solver.prior_cost.parameters(), "lr": lr_max / 2},
         ],
     )
-
     return {
         "optimizer": opt,
         "lr_scheduler": torch.optim.lr_scheduler.CyclicLR(
@@ -110,30 +85,16 @@ def triang_lr_adam(lit_mod, lr_min=5e-5, lr_max=3e-3, nsteps=200):
         ),
     }
 
+
 def remove_nan(da):
     da["lon"] = da.lon.assign_attrs(units="degrees_east")
     da["lat"] = da.lat.assign_attrs(units="degrees_north")
-    
+
     da.transpose("lon", "lat", "time")[:, :] = pyinterp.fill.gauss_seidel(
-         pyinterp.backends.xarray.Grid3D(da)
+        pyinterp.backends.xarray.Grid3D(da)
     )[1]
     return da
 
-def mask(da, sampling_rate = 0.1):
-    time_dim = da.time.size
-    lat_dim = da.lat.size
-    lon_dim = da.lon.size
-
-    random_mask = np.random.choice([0, 1], size=(time_dim, lat_dim, lon_dim), p=[1 - sampling_rate, sampling_rate])
-    mask_data_array = xr.DataArray(random_mask, dims=['time', 'lat', 'lon'])
-    masked_data_array = da.where(mask_data_array == 1, other=np.nan)
-    return masked_data_array
-
-def threshold_xarray(da):
-    threshold = 1000
-    da = xr.where(da > threshold, 1, da)
-    da = xr.where(da <= 0, 0, da)
-    return da
 
 def get_constant_crop(patch_dims, crop, dim_order=["time", "lat", "lon"]):
     patch_weight = np.zeros([patch_dims[d] for d in dim_order], dtype="float32")
@@ -143,6 +104,7 @@ def get_constant_crop(patch_dims, crop, dim_order=["time", "lat", "lon"]):
     )
     patch_weight[mask] = 1.0
     return patch_weight
+
 
 def get_cropped_hanning_mask(patch_dims, crop, **kwargs):
     pw = get_constant_crop(patch_dims, crop)
@@ -162,105 +124,23 @@ def get_triang_time_wei(patch_dims, offset=0, **crop_kw):
         patch_dims.values(),
     )
 
-def get_dirac_time_wei(patch_dims, offset=0, **crop_kw):
-    pw = get_constant_crop(patch_dims, **crop_kw)
-    time_size = patch_dims["time"]
-    
-    # Calculate the center index(es)
-    if time_size % 2 == 0:  # Even
-        center1 = time_size // 2 - 1
-        center_condition = lambda t: (t == center1) * pw
-    else:  # Odd
-        center = time_size // 2
-        center_condition = lambda t: t == center * pw
-    
-    # Use np.fromfunction to create the array
-    return np.fromfunction(
-        lambda t, *a: center_condition(t).astype(float),
-        patch_dims.values(),
-    )
-
-
-def get_constant_crop_depth(patch_dims, crop, dim_order=["time", "z","lat", "lon"]):
-    patch_weight = np.zeros([patch_dims[d] for d in dim_order], dtype="float32")
-    mask = tuple(
-        slice(crop[d], -crop[d]) if crop.get(d, 0) > 0 else slice(None, None)
-        for d in dim_order
-    )
-    patch_weight[mask] = 1.0
-    return patch_weight
-
-def get_cropped_hanning_mask_depth(patch_dims, crop, **kwargs):
-    pw = get_constant_crop(patch_dims, crop)
-
-    t_msk = kornia.filters.get_hanning_kernel1d(patch_dims["time"])
-    z_msk = kornia.filters.get_hanning_kernel1d(patch_dims["z"]) 
-    patch_weight = t_msk[:, None, None, None] * z_msk[None, :, None, None] * pw
-    return patch_weight.cpu().numpy()
-
-
-def get_triang_time_wei_depth(patch_dims, offset=0, **crop_kw):
-    pw = get_constant_crop(patch_dims, **crop_kw)
-    pw = pw[None, :, None, None]
-    return np.fromfunction(
-        lambda t, z,*a: (
-            (1 - np.abs(offset + 2 * t - patch_dims["time"]) / patch_dims["time"]) * pw
-        ),
-        patch_dims.values(),
-    )
-
-def get_triang_time_depth_wei(patch_dims, offset=0, **crop_kw):
-    pw = get_constant_crop(patch_dims, **crop_kw)
-    return np.fromfunction(
-        lambda t, z, *a: (
-            (1 - np.abs(offset + 2 * t - patch_dims["time"]) / patch_dims["time"]) * pw
-        ),
-        patch_dims.values(),
-    )
-
-def load_natl_data(tgt_path, tgt_var, inp_path, inp_var, **kwargs):
-    tgt = (
-        xr.open_dataset(tgt_path)[tgt_var]
-        .sel(kwargs.get('domain', None))
-        .sel(kwargs.get('period', None))
-        .pipe(threshold_xarray)
-    )
-    inp = (
-        xr.open_dataset(inp_path)[inp_var]
-        .sel(kwargs.get('domain', None))
-        .sel(kwargs.get('period', None))
-        .pipe(threshold_xarray)
-        #.pipe(mask)
-    )
-    print(xr.Dataset(
-            dict(input=inp, tgt=(tgt.dims, tgt.values)),
-            inp.coords,
-        )
-        .transpose('time', 'lat', 'lon')
-        .to_array())
-    return (
-        xr.Dataset(
-            dict(input=inp, tgt=(tgt.dims, tgt.values)),
-            inp.coords,
-        )
-        .transpose('time', 'lat', 'lon')
-        .to_array()
-    )
-
-
-def load_enatl(*args, obs_from_tgt=False, **kwargs):
+def load_enatl(*args, obs_from_tgt=True, **kwargs):
+    # ds = xr.open_dataset('../sla-data-registry/qdata/enatl_wo_tide.nc')
+    # print(ds)
+    # return ds.rename(nadir_obs='input', ssh='tgt').to_array().transpose('variable', 'time', 'lat', 'lon').sortby('variable')
     ssh = xr.open_zarr('../sla-data-registry/enatl_preproc/truth_SLA_SSH_NATL60.zarr/').ssh
     nadirs = xr.open_zarr('../sla-data-registry/enatl_preproc/SLA_SSH_5nadirs.zarr/').ssh
     ssh = ssh.interp(
         lon=np.arange(ssh.lon.min(), ssh.lon.max(), 1/20),
         lat=np.arange(ssh.lat.min(), ssh.lat.max(), 1/20)
     )
-    nadirs = nadirs.interp(time=ssh.time, method='nearest').interp(lat=ssh.lat, lon=ssh.lon, method='nearest')
+    nadirs = nadirs.interp(time=ssh.time, method='nearest')\
+        .interp(lat=ssh.lat, lon=ssh.lon, method='zero')
     ds =  xr.Dataset(dict(input=nadirs, tgt=(ssh.dims, ssh.values)), nadirs.coords)
-
     if obs_from_tgt:
         ds = ds.assign(input=ds.tgt.transpose(*ds.input.dims).where(np.isfinite(ds.input), np.nan))
-    return ds.transpose('time', 'lat', 'lon').to_array().load()
+    return ds.transpose('time', 'lat', 'lon').to_array().load().sortby('variable')
+
 
 def load_altimetry_data(path, obs_from_tgt=False):
     ds =  (
@@ -270,49 +150,21 @@ def load_altimetry_data(path, obs_from_tgt=False):
         .assign(
             input=lambda ds: ds.nadir_obs,
             tgt=lambda ds: remove_nan(ds.ssh),
-        )    
+        )
     )
+
     if obs_from_tgt:
         ds = ds.assign(input=ds.tgt.where(np.isfinite(ds.input), np.nan))
-    
-    return (
-        ds[[*src.data.TrainingItem._fields]]
-        .transpose('time', 'lat', 'lon')
-        .to_array()
-    )
 
-def load_celerity_data(path, obs_from_tgt=False):
-    ds =  (
-        xr.open_dataset(path)
-        # .assign(ssh=lambda ds: ds.ssh.coarsen(lon=2, lat=2).mean().interp(lat=ds.lat, lon=ds.lon))
-        .load()
-        .assign(input=lambda ds: ds.celerity,
-                tgt=lambda ds: ds.celerity.fillna(0))    
-    )
-    return (
-        ds[[*src.data.TrainingItem._fields]]
-        #.transpose("time", "z", "y", "x")
-        .transpose("time", "z", "lat", "lon")
-        .to_array()
-    )
-
-def load_cutoff_freq(path, obs_from_tgt=False):
-    ds =  (
-        xr.open_dataset(path)
-        # .assign(ssh=lambda ds: ds.ssh.coarsen(lon=2, lat=2).mean().interp(lat=ds.lat, lon=ds.lon))
-        .load()
-        .assign(input=lambda ds: (threshold_xarray(ds.ecs)),
-                tgt=lambda ds: remove_nan(threshold_xarray(ds.ecs)))   
-        # .assign(input=lambda ds: mask(threshold_xarray(ds.cutoff_freq)),
-        #         tgt=lambda ds: remove_nan(threshold_xarray(ds.cutoff_freq)))   
-    )
-    print(ds)
-    #da = ds[[*src.data.TrainingItem._fields]].transpose("time", "lat", "lon").to_array()
     return (
         ds[[*src.data.TrainingItem._fields]]
         .transpose("time", "lat", "lon")
         .to_array()
     )
+
+def load_dc_data(**kwargs):
+    path_gt="../sla-data-registry/NATL60/NATL/ref_new/NATL60-CJM165_NATL_ssh_y2013.1y.nc",
+    path_obs ="NATL60/NATL/data_new/dataset_nadir_0d.nc"
 
 
 def load_full_natl_data(
@@ -325,24 +177,22 @@ def load_full_natl_data(
     inp = xr.open_dataset(path_obs)[obs_var]
     gt = (
         xr.open_dataset(path_gt)[gt_var]
-        .isel(time=slice(0, -1))
+        # .isel(time=slice(0, -1))
         .sel(lat=inp.lat, lon=inp.lon, method="nearest")
     )
 
     return xr.Dataset(dict(input=inp, tgt=(gt.dims, gt.values)), inp.coords).to_array().sortby('variable')
 
 
-def rmse_based_scores_from_ds(ds, ref_variable='out', study_variable='tgt'):
-    #mask = ~np.isnan(ds['input'])
+def rmse_based_scores_from_ds(ds, ref_variable='tgt', study_variable='out'):
     try:
-        return rmse_based_scores(ds[ref_variable], ds[study_variable])[2:]
+        return rmse_based_scores(ds[study_variable], ds[ref_variable])[2:]
     except:
         return [np.nan, np.nan]
 
-def psd_based_scores_from_ds(ds, ref_variable='out', study_variable='tgt'):
-    print(ds)
+def psd_based_scores_from_ds(ds, ref_variable='tgt', study_variable='out'):
     try:
-        return psd_based_scores(ds[ref_variable], ds[study_variable])[1:]
+        return psd_based_scores(ds[study_variable], ds[ref_variable])[1:]
     except:
         return [np.nan, np.nan]
 
@@ -368,7 +218,6 @@ def rmse_based_scores(da_rec, da_ref):
 
 
 def psd_based_scores(da_rec, da_ref):
-    print('hello')
     err = da_rec - da_ref
     err["time"] = (err.time - err.time[0]) / np.timedelta64(1, "D")
     signal = da_ref
@@ -379,15 +228,12 @@ def psd_based_scores(da_rec, da_ref):
     psd_signal = xrft.power_spectrum(
         signal, dim=["time", "lon"], detrend="constant", window="hann"
     ).compute()
-
     mean_psd_signal = psd_signal.mean(dim="lat").where(
         (psd_signal.freq_lon > 0.0) & (psd_signal.freq_time > 0), drop=True
     )
-    
     mean_psd_err = psd_err.mean(dim="lat").where(
         (psd_err.freq_lon > 0.0) & (psd_err.freq_time > 0), drop=True
     )
-    print(mean_psd_err)
     psd_based_score = 1.0 - mean_psd_err / mean_psd_signal
     level = [0.5]
     cs = plt.contour(
@@ -511,6 +357,8 @@ def geo_energy(da):
 
 def best_ckpt(xp_dir):
     _, xpn = load_cfg(xp_dir)
+    if xpn is None:
+        return None
     print(Path(xp_dir) / xpn / 'checkpoints')
     ckpt_last = max(
         (Path(xp_dir) / xpn / 'checkpoints').glob("*.ckpt"), key=lambda p: p.stat().st_mtime
@@ -533,5 +381,3 @@ def load_cfg(xp_dir):
         return None, None
 
     return cfg, OmegaConf.select(hydra_cfg, "runtime.choices.xp")
-
-

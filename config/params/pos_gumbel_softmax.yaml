@@ -1,0 +1,42 @@
+# @package _global_
+ckpt: /DATASET/envs/oscar/4dvarnet-starter/outputs/2024-04-23/11-05-46/sound_base_transfert/checkpoints/val_mse=1237.19232-epoch=484.ckpt
+
+inp_pos:
+  train: '/DATASET/envs/oscar/eNATL60_BLB002_pos.nc'
+  test: '/DATASET/envs/oscar/NATL60GULF-CJM165_pos.nc'
+## Specific components
+pos_da_train: 
+  _target_: contrib.pos_gumbel_softmax.load_natl_data_pos
+  tgt_path: ${paths.tgt.train}
+  inp_path: ${paths.inp.train}
+  pos_path: ${inp_pos.train}
+  tgt_var: ecs
+  inp_var: ecs
+  pos_var: pos_0_001
+
+pos_da_test: 
+  _target_: contrib.pos_gumbel_softmax.load_natl_data_pos
+  tgt_path: ${paths.tgt.test}
+  inp_path: ${paths.inp.test}
+  pos_path: ${inp_pos.train}
+  tgt_var: ecs
+  inp_var: ecs
+  pos_var: pos_0_001
+
+## Override config
+train_dm:
+  _target_: contrib.pos_gumbel_softmax.MultiModalPosDataModule
+  input_da: ${pos_da_train}
+  
+test_dm:
+  _target_: contrib.pos_gumbel_softmax.MultiModalPosDataModule
+  input_da: ${pos_da_test}
+
+model:
+  _target_: contrib.pos_gumbel_softmax.Lit4dVarNetPos
+  opt_fn:
+    _target_: contrib.pos_gumbel_softmax.cosanneal_lr_adamw
+    _partial_: true
+    lr: 1e-3
+    T_max: ${trainer.max_epochs}
+    weight_decay: 1e-3

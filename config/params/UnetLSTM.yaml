@@ -1,0 +1,11 @@
+# @package _global_
+
+trainer:
+  max_epochs: 600
+
+model:
+  solver:
+    grad_mod:
+      _target_: contrib.UnetLSTM.UNet_LSTM
+      dim_in: ${datamodule.xrds_kw.patch_dims.time}
+      dim_hidden: 48
