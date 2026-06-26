@@ -1,0 +1,53 @@
+# Memory Optimized Configuration
+# This configuration reduces GPU memory usage significantly
+
+trainer:
+  _target_: pytorch_lightning.Trainer
+  max_epochs: 300
+  
+  # CRITICAL: Enable mixed precision training (16-bit) - saves ~50% memory
+  precision: "16-mixed"  # Use "bf16-mixed" if your GPU supports bfloat16 (GPU >=Ampere)
+  
+  # Gradient accumulation - simulates larger batch size without memory cost
+  # Effective batch_size = batch_size * accumulate_grad_batches
+  accumulate_grad_batches: 16  # Increase to 32 or 64 if still OOM
+  
+  # Gradient clipping to prevent exploding gradients
+  gradient_clip_val: 0.5
+  gradient_clip_algorithm: norm
+  
+  # Validation and checkpointing
+  check_val_every_n_epoch: 5
+  log_every_n_steps: 10
+  enable_checkpointing: true
+  
+  # Memory-efficient callbacks
+  callbacks:
+    - _target_: pytorch_lightning.callbacks.ModelCheckpoint
+      monitor: val_loss
+      mode: min
+      save_top_k: 1  # Only keep best model
+      save_last: false  # Don't save last checkpoint to save disk space
+      
+    - _target_: pytorch_lightning.callbacks.EarlyStopping
+      monitor: val_loss
+      patience: 20
+      mode: min
+
+# DataModule settings
+dm:
+  # Reduce batch size - most important for memory
+  dl_kw: 
+    batch_size: 2  # Start with 2, increase to 4 if memory allows
+    num_workers: 2  # Reduce workers to save CPU memory
+    pin_memory: false  # Set to false to reduce memory overhead
+    persistent_workers: false  # Don't keep workers alive between epochs
+    prefetch_factor: 2  # Reduce prefetching
+
+# Model/Solver settings
+solver:
+  use_checkpointing: true  # Enable gradient checkpointing in solver
+  n_step: 10  # Reduce number of solver steps if needed (default might be higher)
+
+# Additional memory-saving environment variables (set before running):
+# export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,max_split_size_mb:128
