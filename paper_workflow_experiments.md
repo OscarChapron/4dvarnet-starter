@@ -5,7 +5,7 @@ These workflows are derived from the two supplied papers:
 - `2604.02850v1.pdf`: depth-aware probabilistic 3D ocean reconstruction from sparse SSH/SST.
 - `preprint_4dvarnet_fm_2025 (36).pdf`: physics-informed neural ensemble DA via conditional flow matching.
 
-This repository currently exposes 4DVarNet-style depth, direct-inversion, and UNet-solver Hydra configs. It does not yet expose a full DDPM or conditional-flow-matching training stack, so the Slurm workflow runs reproducible analogues that map the papers' hypotheses onto available configs.
+This repository exposes 4DVarNet-style depth, direct-inversion, UNet-solver Hydra configs, and a conditional-flow-matching training overlay at `+params=conditional_flow_matching`. The Slurm workflow still runs reproducible analogues by default; use the overlay to train the CFM baseline directly.
 
 ## Workflow A: Depth-Aware Reconstruction
 
@@ -58,6 +58,12 @@ Useful optional overrides:
 ```bash
 MAX_EPOCHS=150 LIMIT_TRAIN_BATCHES=100 LIMIT_VAL_BATCHES=100 RUN_MODE=full sbatch sript_slurm/paper_workflow_experiments.sbatch
 PROJECT_DIR=/Odyssey/private/ochapron/4dvarnet-starter sbatch sript_slurm/paper_workflow_experiments.sbatch
+```
+
+Run the new conditional-flow-matching training overlay directly with:
+
+```bash
+python main.py xp=fdv_lazy_CTS_z_val +params=conditional_flow_matching
 ```
 
 Outputs are written under `outputs/paper_workflows/<job-id>_<timestamp>/`, with one log per experiment in `logs/`.

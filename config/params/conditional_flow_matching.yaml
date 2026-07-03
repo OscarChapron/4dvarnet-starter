@@ -1,0 +1,47 @@
+# @package _global_
+
+cfm:
+  time_channels: ${datamodule.xrds_kw.patch_dims.time}
+  component_channels: ${oc.select:datamodule.xrds_kw.patch_dims.component,1}
+  state_channels: ${eval:${cfm.time_channels}*${cfm.component_channels}}
+  condition_channels: ${eval:2*${cfm.state_channels}}
+  unet_channels: ${eval:${cfm.state_channels}+${cfm.condition_channels}}
+
+cfm_velocity_net:
+  _target_: src.cfm.ConditionalVelocityWrapper
+  condition_mode: concat_extra
+  net:
+    _target_: contrib.Unet_fdv.UNetModel_z
+    in_channels: ${cfm.unet_channels}
+    out_channels: ${cfm.state_channels}
+    model_channels: 96
+    num_res_blocks: 2
+    channel_mult: [1, 2, 4]
+    attention_resolutions: []
+    use_checkpoint: true
+    ignore_depth: false
+    ignore_time: false
+    dropout: 0.0
+
+model:
+  _target_: src.cfm.LitConditionalFlowMatching
+  solver: null
+  velocity_net: ${cfm_velocity_net}
+  opt_fn:
+    _target_: src.cfm.cosanneal_lr_adamw
+    _partial_: true
+    lr: 1e-4
+    T_max: ${trainer.max_epochs}
+    weight_decay: 1e-3
+  rec_weight:
+    _target_: src.cfm.get_triang_time_weight
+    patch_dims: ${datamodule.xrds_kw.patch_dims}
+    crop: {time: 0, lat: 20, lon: 20}
+    offset: 1
+  sampling_rate: 0.001
+  include_obs_mask: true
+  noise_std: 1.0
+  velocity_loss_weight: 1.0
+  x1_loss_weight: 1.0
+  grad_loss_weight: 0.0
+  sample_steps: 20
