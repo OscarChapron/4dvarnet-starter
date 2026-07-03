@@ -114,7 +114,7 @@ test_dm:
   std_c: 1.
 
 model:
-  _target_: contrib.model_depth.Lit4dVarNet_depthv1
+  _target_: src_v1.models.Lit4dVarNet
   persist_rw: false
   opt_fn:
     _target_: contrib.model_depth.cosanneal_lr_adamw

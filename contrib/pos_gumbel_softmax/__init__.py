@@ -171,7 +171,8 @@ class Lit4dVarNetPos(src.models.Lit4dVarNet):
     def test_step(self, batch, batch_idx):
         if batch_idx == 0:
             self.test_data = []
-            
+
+        batch_input_clone = batch.input.clone()
         probabilities = torch.nn.functional.softmax(batch.pos, dim=-1)
         num_samples = int(self.sampling_rate * probabilities.numel())
         indices = torch.multinomial(probabilities.view(-1), num_samples)

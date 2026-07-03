@@ -1,3 +1,4 @@
+import random
 import pandas as pd
 from pathlib import Path
 import pytorch_lightning as pl
@@ -5,6 +6,7 @@ import kornia.filters as kfilts
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from omegaconf import ListConfig
 
 
 class Lit4dVarNet(pl.LightningModule):
@@ -20,7 +22,6 @@ class Lit4dVarNet(pl.LightningModule):
         self.sampling_rate = sampling_rate      
         self.norm_type = norm_type
         #self.mask = (torch.rand(1, *input_shape) > self.sampling_rate).to('cuda:0')
-        print(sampling_rate)
         #self.alphaObs    = solver.obs_cost.weight1_torch
         #self.alphaReg    = solver.prior_cost.weight3_torch
         #self.alphaGrad   = solver.obs_cost.weight2_torch

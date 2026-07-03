@@ -1,6 +1,6 @@
 import torch
 import pytorch_lightning as pl
-import torch.nn.functional as funct
+import torch.nn.functional as F
 
 import pandas as pd
 from pathlib import Path
@@ -196,7 +196,7 @@ class Unet(pl.LightningModule):
         err_num = err.isfinite() & ~non_zeros
         if err_num.sum() == 0:
             return torch.scalar_tensor(1000.0, device=err_num.device).requires_grad_()
-        loss = funct.mse_loss(err_w[err_num], torch.zeros_like(err_w[err_num]))
+        loss = F.mse_loss(err_w[err_num], torch.zeros_like(err_w[err_num]))
         return loss
 
     def forward(self, batch):
@@ -411,7 +411,7 @@ class UnetSolver(torch.nn.Module):
             pad_w = w_r - w_x
 
             if pad_h > 0 or pad_w > 0:
-                x = funct.pad(x, (0, pad_w, 0, pad_h), mode="reflect", value=0)
+                x = F.pad(x, (0, pad_w, 0, pad_h), mode="reflect", value=0)
 
             return torch.concat((x, residue), dim=1)
         else:
@@ -460,7 +460,7 @@ class UnetBig(pl.LightningModule):
         err_num = err.isfinite() & ~non_zeros
         if err_num.sum() == 0:
             return torch.scalar_tensor(1000.0, device=err_num.device).requires_grad_()
-        loss = funct.mse_loss(err_w[err_num], torch.zeros_like(err_w[err_num]))
+        loss = F.mse_loss(err_w[err_num], torch.zeros_like(err_w[err_num]))
         return loss
 
     def forward(self, batch):

@@ -22,9 +22,8 @@ from src.utils import get_constant_crop
 from collections import namedtuple
 from contrib import transfert
 from types import SimpleNamespace
-from typing import Sequence, Tuple, Union, Dict, Any
+from typing import Sequence, Union
 from dataclasses import dataclass, field
-from typing import Optional
 torch.set_float32_matmul_precision('high')
 import itertools  
 TrainingItem = namedtuple('TrainingItem', ['input', 'tgt'])

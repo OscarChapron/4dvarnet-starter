@@ -15,10 +15,9 @@ from src.utils import get_constant_crop
 from contrib import transfert
 from typing import Dict, Any, Optional, Union
 from types import SimpleNamespace as NS
-from typing import Sequence, Tuple, Union, Dict, Any
+from typing import Sequence, Tuple
 import pickle
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 class TransfertXrDataset(XrDataset):

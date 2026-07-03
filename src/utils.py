@@ -37,8 +37,34 @@ def half_lr_adam(lit_mod, lr):
     )
 
 
+def cosanneal_lr_adam_AE(lit_mod, lr, T_max=100, weight_decay=0.):
+    opt = torch.optim.Adam(
+        [
+            {"params": lit_mod.prior_cost.parameters(), "lr": lr},
+        ], weight_decay=weight_decay
+    )
+    return {
+        "optimizer": opt,
+        "lr_scheduler": torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=T_max),
+    }
+
+
 def cosanneal_lr_adam(lit_mod, lr, T_max=100, weight_decay=0.):
     opt = torch.optim.Adam(
+        [
+            {"params": lit_mod.solver.grad_mod.parameters(), "lr": lr},
+            {"params": lit_mod.solver.obs_cost.parameters(), "lr": lr},
+            {"params": lit_mod.solver.prior_cost.parameters(), "lr": lr / 2},
+        ], weight_decay=weight_decay
+    )
+    return {
+        "optimizer": opt,
+        "lr_scheduler": torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=T_max),
+    }
+
+
+def cosanneal_lr_adamw(lit_mod, lr, T_max=100, weight_decay=0.):
+    opt = torch.optim.AdamW(
         [
             {"params": lit_mod.solver.grad_mod.parameters(), "lr": lr},
             {"params": lit_mod.solver.obs_cost.parameters(), "lr": lr},
@@ -96,6 +122,25 @@ def remove_nan(da):
     return da
 
 
+def mask(da, sampling_rate=0.1):
+    time_dim = da.time.size
+    lat_dim = da.lat.size
+    lon_dim = da.lon.size
+    random_mask = np.random.choice(
+        [0, 1],
+        size=(time_dim, lat_dim, lon_dim),
+        p=[1 - sampling_rate, sampling_rate],
+    )
+    mask_data_array = xr.DataArray(random_mask, dims=['time', 'lat', 'lon'])
+    return da.where(mask_data_array == 1, other=np.nan)
+
+
+def threshold_xarray(da):
+    threshold = 1000
+    da = xr.where(da > threshold, 1, da)
+    return xr.where(da <= 0, 0, da)
+
+
 def get_constant_crop(patch_dims, crop, dim_order=["time", "lat", "lon"]):
     patch_weight = np.zeros([patch_dims[d] for d in dim_order], dtype="float32")
     mask = tuple(
@@ -123,6 +168,45 @@ def get_triang_time_wei(patch_dims, offset=0, **crop_kw):
         ),
         patch_dims.values(),
     )
+
+
+def get_dirac_time_wei(patch_dims, offset=0, **crop_kw):
+    pw = get_constant_crop(patch_dims, **crop_kw)
+    time_size = patch_dims["time"]
+
+    if time_size % 2 == 0:
+        center = time_size // 2 - 1
+    else:
+        center = time_size // 2
+
+    return np.fromfunction(
+        lambda t, *a: (t == center).astype(float) * pw,
+        patch_dims.values(),
+    )
+
+
+def load_natl_data(tgt_path, tgt_var, inp_path, inp_var, **kwargs):
+    tgt = (
+        xr.open_dataset(tgt_path)[tgt_var]
+        .sel(kwargs.get('domain', None))
+        .sel(kwargs.get('period', None))
+        .pipe(threshold_xarray)
+    )
+    inp = (
+        xr.open_dataset(inp_path)[inp_var]
+        .sel(kwargs.get('domain', None))
+        .sel(kwargs.get('period', None))
+        .pipe(threshold_xarray)
+    )
+    return (
+        xr.Dataset(
+            dict(input=inp, tgt=(tgt.dims, tgt.values)),
+            inp.coords,
+        )
+        .transpose('time', 'lat', 'lon')
+        .to_array()
+    )
+
 
 def load_enatl(*args, obs_from_tgt=True, **kwargs):
     # ds = xr.open_dataset('../sla-data-registry/qdata/enatl_wo_tide.nc')
@@ -162,10 +246,37 @@ def load_altimetry_data(path, obs_from_tgt=False):
         .to_array()
     )
 
-def load_dc_data(**kwargs):
-    path_gt="../sla-data-registry/NATL60/NATL/ref_new/NATL60-CJM165_NATL_ssh_y2013.1y.nc",
-    path_obs ="NATL60/NATL/data_new/dataset_nadir_0d.nc"
 
+def load_celerity_data(path, obs_from_tgt=False):
+    ds = (
+        xr.open_dataset(path)
+        .load()
+        .assign(
+            input=lambda ds: ds.celerity,
+            tgt=lambda ds: ds.celerity.fillna(0),
+        )
+    )
+    return (
+        ds[[*src.data.TrainingItem._fields]]
+        .transpose("time", "z", "lat", "lon")
+        .to_array()
+    )
+
+
+def load_cutoff_freq(path, obs_from_tgt=False):
+    ds = (
+        xr.open_dataset(path)
+        .load()
+        .assign(
+            input=lambda ds: threshold_xarray(ds.ecs),
+            tgt=lambda ds: remove_nan(threshold_xarray(ds.ecs)),
+        )
+    )
+    return (
+        ds[[*src.data.TrainingItem._fields]]
+        .transpose("time", "lat", "lon")
+        .to_array()
+    )
 
 def load_full_natl_data(
         path_obs="../sla-data-registry/CalData/cal_data_new_errs.nc",

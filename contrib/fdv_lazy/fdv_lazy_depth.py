@@ -24,9 +24,8 @@ from src.utils import get_constant_crop
 from collections import namedtuple
 from contrib import transfert
 from types import SimpleNamespace
-from typing import Sequence, Tuple, Union, Dict, Any
+from typing import Sequence, Union
 from dataclasses import dataclass, field
-from typing import Optional
 torch.set_float32_matmul_precision('high')
 import itertools 
 from torch.utils.data._utils.collate import default_collate
@@ -530,55 +529,6 @@ class TransfertLazyDataModule_Depth(transfert.TransfertDataModule):
 
         # return _make_item
     
-    def setup(self, stage='test'):
-        post_fn = self.post_fn()
-        if stage == 'fit':
-            train_data = self.input_da.sel(self.domains['train'])
-            train_xrds_kw = deepcopy(self.xrds_kw)
-            self.train_ds = LazyXrDataset_Depth(
-                train_data, **train_xrds_kw, depth_dim='component', postpro_fn=post_fn,
-            )
-            if self.aug_kw:
-                self.train_ds = AugmentedDataset(self.train_ds, **self.aug_kw)
-
-            self.val_ds = LazyXrDataset_Depth(
-                self.input_da.sel(self.domains['val']),
-                **self.xrds_kw,
-                depth_dim='component',
-                postpro_fn=post_fn,
-            )
-        else:
-            self.test_ds = LazyXrDataset_Depth(
-                self.input_da.sel(self.domains['test']),
-                **self.xrds_kw,
-                depth_dim='component',
-                postpro_fn=post_fn,
-            )
-
-    def train_dataloader(self):
-        return torch.utils.data.DataLoader(
-            self.train_ds, 
-            shuffle=True, 
-            collate_fn=self.collate_fn_namedtuple,
-            **self.dl_kw
-        )
-
-    def val_dataloader(self):
-        return torch.utils.data.DataLoader(
-            self.val_ds, 
-            shuffle=False, 
-            collate_fn=self.collate_fn_namedtuple,
-            **self.dl_kw
-        )
-
-    def test_dataloader(self):
-        return torch.utils.data.DataLoader(
-            self.test_ds, 
-            shuffle=False, 
-            collate_fn=self.collate_fn_namedtuple,
-            **self.dl_kw
-        )
-    # ----------------------------------------------------------
     def setup(self, stage="test"):
         post_fn = self.post_fn()
         if stage == "fit":

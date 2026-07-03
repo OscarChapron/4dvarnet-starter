@@ -23,9 +23,8 @@ from src.utils import get_constant_crop
 from collections import namedtuple
 from contrib import transfert
 from types import SimpleNamespace
-from typing import Sequence, Tuple, Union, Dict, Any
+from typing import Sequence, Union
 from dataclasses import dataclass, field
-from typing import Optional
 torch.set_float32_matmul_precision('high')
 import itertools 
 
@@ -1334,15 +1333,6 @@ class DepthPositionEnc(nn.Module):
 
         feat = feat.view(B, D, -1, 1, 1).expand(B, D, feat.shape[-1], H, W)
         return feat
-    
-
-    def forward(self, depth_idx: torch.Tensor) -> torch.Tensor:
-        """
-        depth_idx: (D,) long or int32
-        returns: (D, E) float32
-        """
-        return self.pe[depth_idx]
-
 class GradSolverDepth(transfert.GradSolver_Fasc):
     """
     Gradient-based solver that processes each depth level separately.

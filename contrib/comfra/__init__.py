@@ -1,12 +1,14 @@
 from copy import deepcopy
+import functools as ft
 import torch
 import xarray as xr
 import random
 from typing import Sequence, Union
 from omegaconf import ListConfig   # only for type hints – optional
+import pytorch_lightning as pl
 import torch.nn.functional as F
 import kornia.filters as kfilts
-from src.data import AugmentedDataset, BaseDataModule, XrDataset
+from src.data import AugmentedDataset, BaseDataModule, TrainingItem, XrDataset
 
 class BaseDataModule_comfra(pl.LightningDataModule):
     def __init__(self, input_da, domains, xrds_kw, dl_kw, aug_kw=None, norm_type = 'z_score', norm_stats=None, **kwargs):

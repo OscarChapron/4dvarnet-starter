@@ -9,8 +9,6 @@ import src.data
 import src.models
 import src.utils
 from copy import deepcopy
-import torch
-import xarray as xr
 import kornia.filters as kfilts
 from src.data import AugmentedDataset, BaseDataModule, XrDataset
 import contrib.transfert

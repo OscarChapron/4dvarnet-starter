@@ -11,7 +11,7 @@ import kornia.filters as kfilts
 import functools as ft
 from collections import namedtuple
 from torch import Tensor
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 from src.data import AugmentedDataset, BaseDataModule, XrDataset
 from src.models import Lit4dVarNet, GradSolver, BaseObsCost, BilinAEPriorCost

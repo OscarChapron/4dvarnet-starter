@@ -15,7 +15,6 @@ from omegaconf import ListConfig, DictConfig
 from copy import deepcopy
 from pathlib import Path
 import pandas as pd
-import torch.nn.functional as F
 from src.data import AugmentedDataset, BaseDataModule, XrDataset
 from src.utils import get_constant_crop
 from collections import namedtuple
@@ -252,4 +251,7 @@ class LatentEncoderMR(torch.nn.Module):
         dx_latent = self.encoder(x)
         x_latent  = torch.nn.functional.avg_pool2d(x,self.scale_factor)
 
-        return torch.cat((x_latent,dx_latent),dim=1) 
+        return torch.cat((x_latent,dx_latent),dim=1)
+
+
+from .temp import Lit4dVarNetIgnoreNaNLatent

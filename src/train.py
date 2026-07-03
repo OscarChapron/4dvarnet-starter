@@ -5,17 +5,25 @@ import xarray as xr
 torch.set_float32_matmul_precision('high')
 
 def base_training(trainer, dm, lit_mod, ckpt=None):
-    print('ckpt')
-    print(ckpt)
-
     if trainer.logger is not None:
         print()
         print("Logdir:", trainer.logger.log_dir)
         print()
 
-    #trainer.fit(lit_mod, datamodule=dm, ckpt_path=ckpt)
-    #trainer.test(lit_mod, datamodule=dm, ckpt_path='best')
-    trainer.test(lit_mod, datamodule=dm, ckpt_path=ckpt)
+    trainer.fit(lit_mod, datamodule=dm, ckpt_path=ckpt)
+    trainer.test(lit_mod, datamodule=dm, ckpt_path='best')
+
+def base_testing(trainer, dm, lit_mod, ckpt_path='best'):
+    if trainer.logger is not None:
+        print()
+        print("Logdir:", trainer.logger.log_dir)
+        print()
+
+    if ckpt_path is not None:
+        lit_mod = lit_mod.load_from_checkpoint(ckpt_path)
+
+    lit_mod.eval()
+    trainer.test(lit_mod, datamodule=dm)
 
 def multi_dm_training(trainer, dm, lit_mod, test_dm=None, test_fn=None, ckpt=None):
     if trainer.logger is not None:

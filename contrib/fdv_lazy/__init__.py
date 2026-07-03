@@ -24,9 +24,8 @@ from src.utils import get_constant_crop
 from collections import namedtuple
 from contrib import transfert
 from types import SimpleNamespace
-from typing import Sequence, Tuple, Union, Dict, Any
+from typing import Sequence, Union
 from dataclasses import dataclass, field
-from typing import Optional
 torch.set_float32_matmul_precision('medium')  # Use TF32 for better memory efficiency
 import itertools 
 
@@ -1242,15 +1241,6 @@ class DepthPositionEnc(nn.Module):
 
         feat = feat.view(B, D, -1, 1, 1).expand(B, D, feat.shape[-1], H, W)
         return feat
-    
-
-    def forward(self, depth_idx: torch.Tensor) -> torch.Tensor:
-        """
-        depth_idx: (D,) long or int32
-        returns: (D, E) float32
-        """
-        return self.pe[depth_idx]
-
 class GradSolverDepth(transfert.GradSolver_Fasc):
     """
     Gradient-based solver that processes each depth level separately.
@@ -2477,7 +2467,6 @@ class Lit4dVarNet_LazyTransfert(transfert.Lit4dVarNet_Fasc):
     # --- test step using both indices
     # ====================================================
     def test_step(self, batch, batch_idx):
-        from pathlib import Path
         import numpy as np
         
         if batch_idx == 0:
@@ -2550,10 +2539,8 @@ class Lit4dVarNet_LazyTransfert(transfert.Lit4dVarNet_Fasc):
     
     def on_test_epoch_end(self):
         """Load batches from disk, reconstruct test data, and compute metrics"""
-        from pathlib import Path
         import shutil
         import numpy as np
-        import pandas as pd
         
         if not hasattr(self, '_test_temp_dir'):
             return
@@ -2823,7 +2810,7 @@ class GradSolver_Fasc_withStep_z(transfert.GradSolver_Fasc):
         return analysed
     
     def solver_step(self, state, batch, step):
-
+        t = torch.tensor([step], device=state.device).repeat(state.shape[0])
         extra = {'time': t}
         if hasattr(batch, "depth_idx"):
             extra["depth_idx"] = batch.depth_idx.to(state.device)
@@ -2836,7 +2823,6 @@ class GradSolver_Fasc_withStep_z(transfert.GradSolver_Fasc):
 
         grad, = torch.autograd.grad(var_cost, state, create_graph=True, allow_unused=False)
 
-        t = torch.tensor([step], device=grad.device).repeat(grad.shape[0])
         gmod = self.grad_mod(grad, t)
 
         state_update = (1.0 / (step + 1)) * gmod + self.lr_grad * (step + 1) / self.n_step * grad
