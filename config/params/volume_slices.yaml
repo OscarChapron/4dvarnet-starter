@@ -12,17 +12,10 @@
 # of adjacent indices kept along the slicing-normal dimension.
 datamodule:
   xrds_kw:
-    slice_orientation: lat
-    slice_delta: 20
+    slice_orientation: z
+    slice_delta: 1
     slice_thickness: 1
     patch_dims:
-      component: 157
-      lat: 1
+      component: 1
     strides:
-      component: 157
-      lat: 20
-
-model:
-  rec_weight:
-    crop:
-      lat: 0
+      component: 1

@@ -66,16 +66,10 @@ Run the new conditional-flow-matching training overlay directly with:
 python main.py xp=fdv_lazy_CTS_z_val +params=conditional_flow_matching
 ```
 
-Run lat-oriented 3D+t slices every 20 grid points while keeping 157 depth levels:
+Run depth-oriented 3D+t slices and reconstruct every grid point:
 
 ```bash
 sbatch --wrap="python main.py xp=fdv_lazy_CTS_z_val +params='[direct_inversion_unet_z_val,volume_slices]'"
-```
-
-For CFM on the same lat slices, use:
-
-```bash
-sbatch --wrap="python main.py xp=fdv_lazy_CTS_z_val +params='[conditional_flow_matching,volume_slices]'"
 ```
 
 Outputs are written under `outputs/paper_workflows/<job-id>_<timestamp>/`, with one log per experiment in `logs/`.
