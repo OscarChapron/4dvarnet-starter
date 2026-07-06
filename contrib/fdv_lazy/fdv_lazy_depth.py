@@ -51,6 +51,11 @@ class LazyXrDataset_Depth(torch.utils.data.Dataset):
         *,
         var: str | None = None,
         depth_dim: str | None = "component",
+        slice_orientation: str | None = None,
+        slice_delta: int | None = None,
+        slice_thickness: int = 1,
+        orientation: str | None = None,
+        delta: int | None = None,
         **kwargs,
     ):
         super().__init__()
@@ -58,6 +63,13 @@ class LazyXrDataset_Depth(torch.utils.data.Dataset):
         self.depth_dim = depth_dim
         self.mask = None
         self.return_coords = False
+        if slice_orientation is None:
+            slice_orientation = orientation
+        if slice_delta is None:
+            slice_delta = delta if delta is not None else 1
+        self.slice_orientation = slice_orientation
+        self.slice_delta = int(slice_delta)
+        self.slice_thickness = int(slice_thickness)
 
         # --- 1) crop domain if requested
         self.ds = ds.sel(**(domain_limits or {}))
@@ -78,6 +90,10 @@ class LazyXrDataset_Depth(torch.utils.data.Dataset):
         self.patch_dims = dict(patch_dims)
         self.strides = dict(strides or {})
         self._sizes = {dim: self.ds.sizes[dim] for dim in self.ds.dims}
+        self._slice_normal_dim = self._normal_dim_from_orientation(slice_orientation)
+
+        if self._slice_normal_dim is not None:
+            self._configure_volume_slicing()
 
         for dim in self.patch_dims:
             if self.patch_dims[dim] in (None, -1):
@@ -99,6 +115,80 @@ class LazyXrDataset_Depth(torch.utils.data.Dataset):
         self._scan_dims = tuple(self.ds_size.keys())
         self._scan_counts = tuple(self.ds_size[d] for d in self._scan_dims)
         self._num = int(np.prod(self._scan_counts)) if len(self._scan_counts) else 1
+
+    def _normal_dim_from_orientation(self, orientation):
+        if orientation is None or orientation is False:
+            return None
+
+        key = str(orientation).lower().replace("-", "_")
+        if key in {"", "none", "native", "volume", "off", "false"}:
+            return None
+
+        depth_dim = self.depth_dim or "component"
+        aliases = {
+            "component": depth_dim,
+            "depth": depth_dim,
+            "z": depth_dim,
+            "xy": depth_dim,
+            "yx": depth_dim,
+            "lat_lon": depth_dim,
+            "lon_lat": depth_dim,
+            "horizontal": depth_dim,
+            "axial": depth_dim,
+            "lat": "lat",
+            "y": "lat",
+            "xz": "lat",
+            "zx": "lat",
+            "lon_depth": "lat",
+            "depth_lon": "lat",
+            "component_lon": "lat",
+            "lon_component": "lat",
+            "lon": "lon",
+            "x": "lon",
+            "yz": "lon",
+            "zy": "lon",
+            "lat_depth": "lon",
+            "depth_lat": "lon",
+            "component_lat": "lon",
+            "lat_component": "lon",
+        }
+        if key not in aliases:
+            raise ValueError(
+                f"Unsupported slice_orientation={orientation!r}. "
+                "Use one of: xy/component/depth, xz/lat, yz/lon."
+            )
+        return aliases[key]
+
+    def _configure_volume_slicing(self):
+        required = ["time", self.depth_dim or "component", "lat", "lon"]
+        missing = [dim for dim in required if dim not in self._sizes]
+        if missing:
+            raise ValueError(
+                "slice_orientation requires a full 3D+t dataset with "
+                f"dimensions {required}; missing {missing}."
+            )
+
+        if self._slice_normal_dim not in self._sizes:
+            raise ValueError(
+                f"slice_orientation={self.slice_orientation!r} maps to "
+                f"dimension {self._slice_normal_dim!r}, which is not in dataset dims {list(self._sizes)}."
+            )
+        if self.slice_delta < 1:
+            raise ValueError("slice_delta must be >= 1")
+        if self.slice_thickness < 1:
+            raise ValueError("slice_thickness must be >= 1")
+
+        # Ensure full 3D+t coordinates survive in coords/reconstruction even when
+        # the caller only provided a subset of patch_dims.
+        for dim in required:
+            self.patch_dims.setdefault(dim, self._sizes[dim])
+            self.strides.setdefault(dim, 1)
+
+        self.patch_dims[self._slice_normal_dim] = min(
+            self.slice_thickness,
+            self._sizes[self._slice_normal_dim],
+        )
+        self.strides[self._slice_normal_dim] = self.slice_delta
 
     # ----------------------------------------------------------
     def __len__(self):
@@ -212,6 +302,8 @@ class LazyXrDataset_Depth(torch.utils.data.Dataset):
             w_np = np.asarray(weight, dtype=np.float32)
             if w_np.shape == (T*C, H, W):
                 w_np = w_np.reshape(T, C, H, W)
+        if w_np.shape != (T, C, H, W):
+            w_np = np.ones((T, C, H, W), dtype=np.float32)
 
         # --- Vectorized accumulation using advanced indexing ---
         for item, co in zip(items, coords):

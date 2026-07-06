@@ -1,0 +1,28 @@
+# @package _global_
+
+# Optional slicing overlay for full 3D+t datasets with dimensions
+# (time, component/z, lat, lon).
+#
+# slice_orientation accepts:
+# - xy / component / depth: horizontal lat-lon slices, separated along component
+# - xz / lat: depth-lon slices, separated along latitude
+# - yz / lon: depth-lat slices, separated along longitude
+#
+# slice_delta is an index stride between slices. slice_thickness is the number
+# of adjacent indices kept along the slicing-normal dimension.
+datamodule:
+  xrds_kw:
+    slice_orientation: lat
+    slice_delta: 20
+    slice_thickness: 1
+    patch_dims:
+      component: 157
+      lat: 1
+    strides:
+      component: 157
+      lat: 20
+
+model:
+  rec_weight:
+    crop:
+      lat: 0
