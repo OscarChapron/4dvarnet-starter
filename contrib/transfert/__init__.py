@@ -352,11 +352,13 @@ class Lit4dVarNet_Fasc(Lit4dVarNet):
         *args,
         sampling_rate: Union[float, Sequence[float], ListConfig] = 1.0,
         norm_type: str = "z_score",
+        depth_gradient_weight: float = 1.0,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.sampling_rate = sampling_rate
         self.norm_type = norm_type
+        self.depth_gradient_weight = depth_gradient_weight
     
     def weighted_mse_transfert(self, err: torch.Tensor, weight: torch.Tensor) -> torch.Tensor:
         """
@@ -472,9 +474,9 @@ class Lit4dVarNet_Fasc(Lit4dVarNet):
             )
             self.log(f"{phase}_prior_cost", prior_cost, prog_bar=True, on_step=False, on_epoch=True)
             # Ensure loss terms are tensors and convert to numpy scalars if needed
-            composite = 10 * loss + 20 * prior_cost + 5 * grad_loss + 5 * comp_gloss
+            composite = 10 * loss + 20 * prior_cost + 5 * grad_loss + self.depth_gradient_weight * comp_gloss
             return composite, out
-        total_loss = 10 * loss + 50 * grad_loss + 1 * comp_gloss
+        total_loss = 10 * loss + 50 * grad_loss + self.depth_gradient_weight * comp_gloss
         return total_loss, out
 
     def base_step(self, batch, phase=""):

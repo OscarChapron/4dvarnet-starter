@@ -1,0 +1,18 @@
+# @package _global_
+
+# 4DVarNet SSP reconstruction baseline for residual post-processing.
+# Loads contiguous 8-depth/component windows so the model sees local vertical
+# structure and activates the depth-gradient loss (`comp_gloss`).
+datamodule:
+  xrds_kw:
+    patch_dims:
+      component: 8
+    strides:
+      component: 1
+
+model:
+  depth_gradient_weight: 5.0
+
+prior_cost_unet_depth:
+  ignore_depth: false
+  ignore_time: false

@@ -419,3 +419,249 @@ class LitConditionalFlowMatching(pl.LightningModule):
             return stat[comp_idx].view(b, 1, c, 1, 1)
 
         return stat.mean().view(*([1] * ref.ndim))
+
+
+class LitResidualFlowMatching(pl.LightningModule):
+    """
+    Residual flow matching on top of a frozen 4DVarNet reconstruction.
+
+    The expected batch convention is:
+      - `batch.input`: deterministic 4DVarNet background/reconstruction xb
+      - `batch.tgt`: reference SSP x
+
+    It supports two Comp_residual-style modes:
+      - `flow`: direct residual CFM on r = x - xb
+      - `mean_flow`: deterministic residual mean plus stochastic anomaly flow
+
+    The flow network predicts the conditional endpoint expectation E[r1|r_tau,c]
+    (or E[e1|e_tau,c] for anomalies). Sampling uses the preprint ODE for the
+    linear interpolant alpha=1-tau, beta=tau:
+        dr_tau/dtau = (E[r1|r_tau,c] - r_tau) / (1 - tau).
+    """
+
+    def __init__(
+        self,
+        flow_net: nn.Module,
+        opt_fn,
+        mean_net: Optional[nn.Module] = None,
+        method: str = "flow",
+        rec_weight=None,
+        norm_type: str = "z_score",
+        norm_stats=None,
+        test_metrics=None,
+        pre_metric_fn=None,
+        include_obs_mask: bool = False,
+        residual_scale: float = 1.0,
+        noise_std: float = 1.0,
+        t_eps: float = 1e-5,
+        mean_loss_weight: float = 1.0,
+        flow_loss_weight: float = 1.0,
+        depth_gradient_weight: float = 0.0,
+        sample_steps: int = 20,
+        detach_mean: bool = True,
+        persist_rw: bool = True,
+        **kwargs,
+    ):
+        super().__init__()
+        if method not in {"flow", "mean_flow", "unet_flow"}:
+            raise ValueError("method must be 'flow', 'mean_flow', or 'unet_flow'")
+        self.save_hyperparameters(ignore=["flow_net", "mean_net", "opt_fn", "rec_weight", "test_metrics", "pre_metric_fn", "kwargs"])
+        self.flow_net = flow_net
+        self.mean_net = mean_net
+        self.opt_fn = opt_fn
+        self.method = "mean_flow" if method == "unet_flow" else method
+        self.norm_type = norm_type
+        self._norm_stats = norm_stats
+        self.metrics = test_metrics or {}
+        self.pre_metric_fn = pre_metric_fn or (lambda x: x)
+        self.include_obs_mask = include_obs_mask
+        self.residual_scale = residual_scale
+        self.noise_std = noise_std
+        self.t_eps = t_eps
+        self.mean_loss_weight = mean_loss_weight
+        self.flow_loss_weight = flow_loss_weight
+        self.depth_gradient_weight = depth_gradient_weight
+        self.sample_steps = sample_steps
+        self.detach_mean = detach_mean
+        self.test_data = None
+
+        if self.method == "mean_flow" and self.mean_net is None:
+            raise ValueError("mean_net is required for method='mean_flow'")
+
+        if rec_weight is not None:
+            self.register_buffer(
+                "rec_weight",
+                torch.as_tensor(rec_weight, dtype=torch.float32),
+                persistent=persist_rw,
+            )
+        else:
+            self.rec_weight = None
+
+    @property
+    def norm_stats(self):
+        if self._norm_stats is not None:
+            return self._norm_stats
+        trainer = getattr(self, "_trainer", None)
+        if trainer is not None and trainer.datamodule is not None:
+            return trainer.datamodule.norm_stats()
+        return (0.0, 1.0)
+
+    def configure_optimizers(self):
+        return self.opt_fn(self)
+
+    def forward(self, batch, sample_steps: Optional[int] = None):
+        return self.sample(batch, sample_steps=sample_steps)
+
+    def training_step(self, batch, batch_idx):
+        return self.step(batch, "train")
+
+    def validation_step(self, batch, batch_idx):
+        return self.step(batch, "val")
+
+    def step(self, batch, phase: str):
+        x, original_shape = LitConditionalFlowMatching._flatten_state(batch.tgt)
+        xb, _ = LitConditionalFlowMatching._flatten_state(batch.input)
+        valid_target = torch.isfinite(x)
+        x = x.nan_to_num()
+        xb = xb.nan_to_num()
+
+        residual = (x - xb) / float(self.residual_scale)
+        condition = self._condition_from_background(xb)
+        extra = self._extra_from_batch(batch, x.device)
+        weight = self._channel_weight(x)
+        t = self._sample_t(x)
+        noise = self.noise_std * torch.randn_like(residual)
+
+        if self.method == "flow":
+            r_t = (1.0 - t) * noise + t * residual
+            pred_residual = self.flow_net(r_t, t.flatten(), condition, extra)
+            flow_loss = LitConditionalFlowMatching._weighted_mse(pred_residual - residual, weight, valid_target)
+            mean_loss = torch.zeros((), device=x.device, dtype=x.dtype)
+            endpoint = pred_residual
+        else:
+            mean_residual = self.mean_net(torch.zeros_like(residual), torch.zeros(x.size(0), device=x.device, dtype=x.dtype), condition, extra)
+            mean_loss = LitConditionalFlowMatching._weighted_mse(mean_residual - residual, weight, valid_target)
+            anomaly = residual - (mean_residual.detach() if self.detach_mean else mean_residual)
+            e_t = (1.0 - t) * noise + t * anomaly
+            pred_anomaly = self.flow_net(e_t, t.flatten(), condition, extra)
+            flow_loss = LitConditionalFlowMatching._weighted_mse(pred_anomaly - anomaly, weight, valid_target)
+            endpoint = mean_residual + pred_anomaly
+
+        x_hat = xb + endpoint * float(self.residual_scale)
+        depth_loss = self._depth_gradient_loss(x_hat, x, original_shape)
+        loss = (
+            self.mean_loss_weight * mean_loss
+            + self.flow_loss_weight * flow_loss
+            + self.depth_gradient_weight * depth_loss
+        )
+
+        self.log(f"{phase}_loss", loss, prog_bar=True, on_step=False, on_epoch=True, batch_size=x.size(0))
+        self.log(f"{phase}_residual_flow_loss", flow_loss, prog_bar=False, on_step=False, on_epoch=True, batch_size=x.size(0))
+        self.log(f"{phase}_residual_mean_loss", mean_loss, prog_bar=False, on_step=False, on_epoch=True, batch_size=x.size(0))
+        self.log(f"{phase}_mse", 10000.0 * LitConditionalFlowMatching._weighted_mse(x_hat - x, weight, valid_target), prog_bar=True, on_step=False, on_epoch=True, batch_size=x.size(0))
+        if self.depth_gradient_weight > 0.0:
+            self.log(f"{phase}_depth_gloss", depth_loss, prog_bar=False, on_step=False, on_epoch=True, batch_size=x.size(0))
+        return loss
+
+    @torch.no_grad()
+    def sample(self, batch, sample_steps: Optional[int] = None):
+        sample_steps = int(sample_steps or self.sample_steps)
+        xb, original_shape = LitConditionalFlowMatching._flatten_state(batch.input)
+        xb = xb.nan_to_num()
+        condition = self._condition_from_background(xb)
+        extra = self._extra_from_batch(batch, xb.device)
+        dt = 1.0 / sample_steps
+        eps_denom = 1.0 / max(sample_steps, 2)
+
+        if self.method == "flow":
+            state = self.noise_std * torch.randn_like(xb)
+            for step in range(sample_steps):
+                tau = step * dt
+                t = torch.full((xb.size(0),), tau, device=xb.device, dtype=xb.dtype)
+                pred_endpoint = self.flow_net(state, t, condition, extra)
+                state = state + dt * (pred_endpoint - state) / max(1.0 - tau, eps_denom)
+            out = xb + state * float(self.residual_scale)
+        else:
+            mean_residual = self.mean_net(torch.zeros_like(xb), torch.zeros(xb.size(0), device=xb.device, dtype=xb.dtype), condition, extra)
+            anomaly = self.noise_std * torch.randn_like(xb)
+            for step in range(sample_steps):
+                tau = step * dt
+                t = torch.full((xb.size(0),), tau, device=xb.device, dtype=xb.dtype)
+                pred_endpoint = self.flow_net(anomaly, t, condition, extra)
+                anomaly = anomaly + dt * (pred_endpoint - anomaly) / max(1.0 - tau, eps_denom)
+            out = xb + (mean_residual + anomaly) * float(self.residual_scale)
+
+        return LitConditionalFlowMatching._unflatten_state(out, original_shape)
+
+    def test_step(self, batch, batch_idx):
+        if batch_idx == 0:
+            self.test_data = []
+        out = self(batch=batch)
+        residual = batch.tgt.nan_to_num() - batch.input.nan_to_num()
+        denorm = self._denorm_fn(batch.tgt, getattr(batch, "comp_idx", None))
+        self.test_data.append(torch.stack(
+            [
+                denorm(batch.input).detach().cpu(),
+                denorm(batch.tgt).detach().cpu(),
+                denorm(out).detach().cpu(),
+                residual.detach().cpu(),
+            ],
+            dim=1,
+        ))
+
+    @property
+    def test_quantities(self):
+        return ["xb", "tgt", "out", "residual_norm"]
+
+    def on_test_epoch_end(self):
+        rec_da = self.trainer.test_dataloaders.dataset.reconstruct(
+            self.test_data,
+            self._weight_for_reconstruct(),
+        )
+        if isinstance(rec_da, list):
+            rec_da = rec_da[0]
+        self.test_data = rec_da.assign_coords(dict(v0=self.test_quantities)).to_dataset(dim="v0")
+        metric_data = self.test_data.pipe(self.pre_metric_fn)
+        metrics = pd.Series({
+            metric_n: metric_fn(metric_data)
+            for metric_n, metric_fn in self.metrics.items()
+        })
+        print(metrics.to_frame(name="Metrics").to_markdown())
+        if self.logger:
+            save_path = Path(self.logger.log_dir) / "test_data.nc"
+            self.test_data.to_netcdf(save_path)
+            print(save_path)
+            self.logger.log_metrics(metrics.to_dict())
+
+    def _condition_from_background(self, xb: torch.Tensor) -> torch.Tensor:
+        if not self.include_obs_mask:
+            return xb
+        obs_mask = torch.isfinite(xb).to(dtype=xb.dtype)
+        return torch.cat([xb.nan_to_num(), obs_mask], dim=1)
+
+    def _extra_from_batch(self, batch, device) -> dict:
+        return LitConditionalFlowMatching._extra_from_batch(self, batch, device)
+
+    def _sample_t(self, ref: torch.Tensor) -> torch.Tensor:
+        return LitConditionalFlowMatching._sample_t(self, ref)
+
+    def _channel_weight(self, ref: torch.Tensor):
+        return LitConditionalFlowMatching._channel_weight(self, ref)
+
+    def _weight_for_reconstruct(self):
+        return LitConditionalFlowMatching._weight_for_reconstruct(self)
+
+    def _denorm_fn(self, ref_tensor: torch.Tensor, comp_idx: Optional[torch.Tensor]):
+        return LitConditionalFlowMatching._denorm_fn(self, ref_tensor, comp_idx)
+
+    def _depth_gradient_loss(self, pred: torch.Tensor, target: torch.Tensor, original_shape):
+        if self.depth_gradient_weight <= 0.0 or original_shape is None:
+            return torch.zeros((), device=pred.device, dtype=pred.dtype)
+        _, _, c, _, _ = original_shape
+        if c <= 1:
+            return torch.zeros((), device=pred.device, dtype=pred.dtype)
+        pred5 = LitConditionalFlowMatching._unflatten_state(pred, original_shape)
+        target5 = LitConditionalFlowMatching._unflatten_state(target, original_shape)
+        return LitConditionalFlowMatching._weighted_mse(
+            pred5[:, :, 1:] - pred5[:, :, :-1] - (target5[:, :, 1:] - target5[:, :, :-1]),
+        )

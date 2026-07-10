@@ -672,7 +672,10 @@ def load_natl_data_pca(tgt_path, tgt_var, inp_path, inp_var, **kwargs):
     ds = xr.Dataset(
         dict(input=inp, tgt=(tgt.dims, tgt.values)),
         inp.coords,
-    ).rename({'z': 'component'}).transpose('time', 'component', 'lat', 'lon')#.to_array()
+    )
+    if 'z' in ds.dims or 'z' in ds.coords:
+        ds = ds.rename({'z': 'component'})
+    ds = ds.transpose('time', 'component', 'lat', 'lon')#.to_array()
     
     return ds
 

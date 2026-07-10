@@ -1,0 +1,77 @@
+# @package _global_
+
+# Residual flow matching after a frozen 4DVarNet pass.
+# Expected datamodule convention: input=xb, tgt=target. You can produce this
+# with scripts/export_comp_residual_inputs.py and then point inp/tgt paths to
+# the exported NetCDF variables xb/target (or input/tgt aliases).
+residual_fm:
+  time_channels: ${datamodule.xrds_kw.patch_dims.time}
+  component_channels: ${oc.select:datamodule.xrds_kw.patch_dims.component,1}
+  state_channels: ${eval:${residual_fm.time_channels}*${residual_fm.component_channels}}
+  condition_channels: ${residual_fm.state_channels}
+  unet_channels: ${eval:${residual_fm.state_channels}+${residual_fm.condition_channels}}
+
+residual_flow_net:
+  _target_: src.cfm.ConditionalVelocityWrapper
+  condition_mode: concat_extra
+  net:
+    _target_: contrib.Unet_fdv.UNetModel_z
+    in_channels: ${residual_fm.unet_channels}
+    out_channels: ${residual_fm.state_channels}
+    model_channels: 96
+    num_res_blocks: 2
+    channel_mult: [1, 2, 4]
+    attention_resolutions: []
+    use_checkpoint: true
+    ignore_depth: false
+    ignore_time: false
+    dropout: 0.0
+
+residual_mean_net:
+  _target_: src.cfm.ConditionalVelocityWrapper
+  condition_mode: concat_extra
+  net:
+    _target_: contrib.Unet_fdv.UNetModel_z
+    in_channels: ${residual_fm.unet_channels}
+    out_channels: ${residual_fm.state_channels}
+    model_channels: 64
+    num_res_blocks: 2
+    channel_mult: [1, 2, 4]
+    attention_resolutions: []
+    use_checkpoint: true
+    ignore_depth: false
+    ignore_time: true
+    dropout: 0.0
+
+train_dm:
+  input_da:
+    tgt_var: target
+    inp_var: xb
+
+test_dm:
+  input_da:
+    tgt_var: target
+    inp_var: xb
+
+model:
+  _target_: src.cfm.LitResidualFlowMatching
+  method: flow
+  flow_net: ${residual_flow_net}
+  mean_net: ${residual_mean_net}
+  opt_fn:
+    _target_: src.cfm.cosanneal_lr_adamw
+    _partial_: true
+    lr: 1e-4
+    T_max: ${trainer.max_epochs}
+    weight_decay: 1e-3
+  rec_weight:
+    _target_: src.cfm.get_triang_time_weight
+    patch_dims: ${datamodule.xrds_kw.patch_dims}
+    crop: {time: 0, lat: 20, lon: 20}
+    offset: 1
+  residual_scale: 1.0
+  noise_std: 1.0
+  flow_loss_weight: 1.0
+  mean_loss_weight: 1.0
+  depth_gradient_weight: 1.0
+  sample_steps: 20
